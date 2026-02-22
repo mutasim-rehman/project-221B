@@ -1,0 +1,20 @@
+# 221B Baker Street — Sherlock Holmes RAG
+
+# Core
+python-dotenv>=1.0.0
+
+# Gemini (LLM only - embeddings are local)
+google-generativeai>=0.8.0
+
+# Local embeddings (no API, no rate limits)
+sentence-transformers>=2.2.0
+
+# Vector store
+chromadb>=0.4.0
+
+# Text processing
+tiktoken>=0.5.0
+
+# API (Phase 4)
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
