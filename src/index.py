@@ -1,8 +1,6 @@
 """Build ChromaDB index from Sherlock Holmes canon.
 
 Run: python -m src.index
-
-Requires GEMINI_API_KEY in .env
 """
 from src.chunker import chunk_document
 from src.config import CHROMA_DIR, COLLECTION_NAME, CHUNK_SIZE, CHUNK_OVERLAP
