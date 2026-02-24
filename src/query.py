@@ -42,6 +42,8 @@ class Mode(str, Enum):
     CANON_QA = "canon_qa"
     CHARACTER_CHAT = "character_chat"
     RAW_CHUNKS = "raw_chunks"
+    SCENE_CHAT = "scene_chat"
+    OOC_EXPLAIN = "ooc_explain"
 
 
 def retrieve(query: str, top_k: int = TOP_K) -> tuple[list[str], list[dict]]:
@@ -147,6 +149,29 @@ def _format_history(character_key: str, history: list[tuple[str, str]], max_turn
     return "\n\n".join(parts)
 
 
+def _format_scene_history(
+    character_keys: list[str],
+    history: list[tuple[str, str]],
+    max_turns: int = 4,
+) -> str:
+    """Render prior multi-character scene turns (user + combined reply)."""
+    if not history:
+        return "No prior scene so far."
+
+    char_names = [CHARACTERS[key]["name"] for key in character_keys]
+    recent = history[-max_turns:]
+    parts: list[str] = []
+    for idx, (user_text, scene_reply) in enumerate(recent, 1):
+        parts.append(
+            f"Turn {idx}:\n"
+            f"User: {user_text}\n"
+            f"Scene reply (multiple speakers mixed):\n{scene_reply}"
+        )
+    names_str = ", ".join(char_names)
+    header = f"Previous dialogue scenes between: {names_str}."
+    return header + "\n\n" + "\n\n".join(parts)
+
+
 def generate_character_reply(
     character_key: str,
     query: str,
@@ -158,6 +183,9 @@ def generate_character_reply(
     cfg = CHARACTERS[character_key]
     char_name = cfg["name"]
     profile = cfg["profile"]
+    verbosity = cfg.get("verbosity", "normal")
+    politeness = cfg.get("politeness", "polite")
+    deductive_depth = cfg.get("deductive_depth", "normal")
     context = _build_context(chunks, metas)
     history_text = _format_history(character_key, history)
 
@@ -165,6 +193,11 @@ def generate_character_reply(
 
 Character profile:
 {profile}
+
+Character tuning knobs (guidelines for your responses):
+- Desired verbosity: {verbosity} (shape how long and detailed your replies are).
+- Desired politeness: {politeness} (how courteous or brusque you are).
+- Desired deductive depth: {deductive_depth} (how much step-by-step reasoning you expose explicitly).
 
 Your rules:
 - Stay strictly in-character: match {char_name}'s tone, knowledge, and manner of speech.
@@ -186,6 +219,133 @@ Canon passages:
 User: {query}
 
 Respond with a single, concise in-character reply from {char_name}."""
+
+    try:
+        response = OLLAMA_CLIENT.chat(model=OLLAMA_MODEL, messages=[{"role": "user", "content": prompt}])
+        reply = response["message"]["content"].strip()
+        return reply
+    except Exception as e:
+        err = str(e).lower()
+        if "connection" in err or "refused" in err or "connect" in err:
+            return "Ollama is not running. Install from ollama.com, then run: ollama run llama3.2"
+        if "requires more system memory" in err or "more system memory" in err:
+            return (
+                "The configured Ollama model requires more system memory than is available.\n"
+                "Choose a smaller model (e.g. a 1B/2B variant), `ollama pull` it, and set OLLAMA_MODEL "
+                "in your .env to that model name, then restart the program."
+            )
+        raise
+
+
+def generate_scene_reply(
+    character_keys: list[str],
+    query: str,
+    chunks: list[str],
+    metas: list[dict],
+    history: list[tuple[str, str]],
+) -> str:
+    """Generate a multi-character dialogue scene between 2–3 personas."""
+    if not character_keys:
+        raise ValueError("At least one character key is required for a scene.")
+
+    # Resolve character configs and names.
+    cfgs = [CHARACTERS[key] for key in character_keys]
+    names = [cfg["name"] for cfg in cfgs]
+    context = _build_context(chunks, metas)
+    history_text = _format_scene_history(character_keys, history)
+
+    roster_lines: list[str] = []
+    for cfg in cfgs:
+        name = cfg["name"]
+        profile = cfg["profile"]
+        verbosity = cfg.get("verbosity", "normal")
+        politeness = cfg.get("politeness", "polite")
+        deductive_depth = cfg.get("deductive_depth", "normal")
+        roster_lines.append(
+            f"{name}:\n"
+            f"- Profile: {profile}\n"
+            f"- Verbosity: {verbosity}\n"
+            f"- Politeness: {politeness}\n"
+            f"- Deductive depth: {deductive_depth}\n"
+        )
+    roster = "\n".join(roster_lines)
+
+    names_str = ", ".join(names)
+    prompt = f"""You are writing a short in-universe dialogue scene between several Sherlock Holmes characters.
+
+Cast of characters:
+{roster}
+
+Scene rules:
+- Keep every character strictly in-character, matching the tone, knowledge, and manner of speech described above.
+- The conversation is set in late 19th / early 20th century London, unless the user clearly specifies otherwise.
+- Ground the scene in the canon passages below wherever possible, but do not mention 'passages', 'documents', or 'sources'.
+- Do not mention that you are an AI or a language model.
+- Alternate between the listed characters naturally; they may interrupt or respond directly to each other's lines.
+- Tag every spoken line with the speaker's name, e.g. "Sherlock Holmes:" or "Dr. John Watson:".
+- You may include very brief bracketed stage directions like "[Holmes studies the footprints]" when helpful, but keep the focus on dialogue.
+
+Conversation so far across scenes:
+{history_text}
+
+Canon passages:
+{context}
+
+User instruction for the new scene:
+{query}
+
+Now write the next concise scene of dialogue between {names_str}, following the rules above. Respond only with the scene (speaker-tagged dialogue and any minimal stage directions)."""
+
+    try:
+        response = OLLAMA_CLIENT.chat(model=OLLAMA_MODEL, messages=[{"role": "user", "content": prompt}])
+        reply = response["message"]["content"].strip()
+        return reply
+    except Exception as e:
+        err = str(e).lower()
+        if "connection" in err or "refused" in err or "connect" in err:
+            return "Ollama is not running. Install from ollama.com, then run: ollama run llama3.2"
+        if "requires more system memory" in err or "more system memory" in err:
+            return (
+                "The configured Ollama model requires more system memory than is available.\n"
+                "Choose a smaller model (e.g. a 1B/2B variant), `ollama pull` it, and set OLLAMA_MODEL "
+                "in your .env to that model name, then restart the program."
+            )
+        raise
+
+
+def generate_ooc_explanation(
+    character_key: str,
+    query: str,
+    chunks: list[str],
+    metas: list[dict],
+    history: list[tuple[str, str]],
+) -> str:
+    """Explain the in-character conversation and fiction in an out-of-character voice."""
+    cfg = CHARACTERS[character_key]
+    char_name = cfg["name"]
+    context = _build_context(chunks, metas)
+    history_text = _format_history(character_key, history)
+
+    prompt = f"""You are an analyst commenting on Sherlock Holmes fiction and on a prior in-character conversation.
+
+You are NOT roleplaying as {char_name} here. You are speaking out-of-character, explaining what is going on.
+
+Your tasks:
+- Explain, in plain analytical language, what is happening in the story and conversation so far.
+- Refer to canon events and relationships only when they are supported by the passages below.
+- When helpful, briefly explain why {char_name} (or other characters) might respond in certain ways, based on the canon profile.
+- Answer the user's out-of-character request directly, even if it asks you to critique or dissect the roleplay.
+
+In-character conversation so far:
+{history_text}
+
+Canon passages:
+{context}
+
+User's out-of-character request:
+{query}
+
+Now respond with a clear, out-of-character explanation that comments on the fiction and prior conversation."""
 
     try:
         response = OLLAMA_CLIENT.chat(model=OLLAMA_MODEL, messages=[{"role": "user", "content": prompt}])

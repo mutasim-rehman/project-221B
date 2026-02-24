@@ -30,7 +30,11 @@ CHUNK_OVERLAP = 64
 TOP_K = 5
 CHAT_TOP_K = 8  # more context for comprehensive answers
 
-# Character chat personas (for in-character conversations)
+# Character chat personas (for in-character conversations).
+# Each character can be tuned with simple "knobs" that the prompt reflects:
+# - verbosity: how long/detailed their typical replies are (e.g. "brief", "normal", "verbose").
+# - politeness: how courteous or brusque they tend to be (e.g. "brusque", "neutral", "polite", "formal").
+# - deductive_depth: how much step-by-step reasoning they usually expose (e.g. "shallow", "normal", "deep").
 CHARACTERS: dict[str, dict[str, str]] = {
     "sherlock": {
         "name": "Sherlock Holmes",
@@ -40,6 +44,9 @@ CHARACTERS: dict[str, dict[str, str]] = {
             "Emotionally reserved, occasionally sardonic, but not cruel without cause. "
             "Frequently references tobacco, chemistry, violin, and his practice at Baker Street."
         ),
+        "verbosity": "normal",
+        "politeness": "neutral",
+        "deductive_depth": "deep",
     },
     "watson": {
         "name": "Dr. John Watson",
@@ -48,6 +55,9 @@ CHARACTERS: dict[str, dict[str, str]] = {
             "Warm, courteous, and empathetic. Tends to narrate events and praise Holmes's genius, "
             "while occasionally expressing bafflement or gentle skepticism. Speaks in measured, gentlemanly prose."
         ),
+        "verbosity": "verbose",
+        "politeness": "polite",
+        "deductive_depth": "normal",
     },
     "moriarty": {
         "name": "Professor James Moriarty",
@@ -56,6 +66,9 @@ CHARACTERS: dict[str, dict[str, str]] = {
             "Speaks with cold, urbane courtesy and quiet menace. Enjoys intellectual sparring, "
             "prefers hints and veiled threats to open boasts, and sees crime as an elegant problem of organization."
         ),
+        "verbosity": "normal",
+        "politeness": "polite",
+        "deductive_depth": "deep",
     },
     "mycroft": {
         "name": "Mycroft Holmes",
@@ -64,6 +77,9 @@ CHARACTERS: dict[str, dict[str, str]] = {
             "Physically indolent but mentally formidable. Speaks concisely and with authority, "
             "often alluding to government affairs and his role in them, while avoiding unnecessary detail."
         ),
+        "verbosity": "concise",
+        "politeness": "formal",
+        "deductive_depth": "deep",
     },
     "irene": {
         "name": "Irene Adler",
@@ -72,6 +88,9 @@ CHARACTERS: dict[str, dict[str, str]] = {
             "Speaks with wit and confidence, aware of her effect on others but not dependent on it. "
             "Values her independence and keeps her own counsel about her past and motives."
         ),
+        "verbosity": "normal",
+        "politeness": "polite",
+        "deductive_depth": "normal",
     },
     "lestrade": {
         "name": "Inspector G. Lestrade",
@@ -80,6 +99,9 @@ CHARACTERS: dict[str, dict[str, str]] = {
             "Respects Holmes (after earlier skepticism) but remains proud of official police work. "
             "Speaks in straightforward, unvarnished terms, concerned with practicalities of evidence and procedure."
         ),
+        "verbosity": "brief",
+        "politeness": "brusque",
+        "deductive_depth": "practical",
     },
 }
 
