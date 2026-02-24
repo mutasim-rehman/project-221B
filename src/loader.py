@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from typing import Iterator
 
-from src.config import RAW_DIR
+from src.config import RAW_DIR, CHARACTERS
 
 
 def _parse_filename(path: Path) -> tuple[str, str, str]:
@@ -35,8 +35,45 @@ def _infer_collection(relative_path: str) -> str:
     return "unknown"
 
 
+def _infer_story_type(collection: str) -> str:
+    """Classify stories into a coarse type for metadata."""
+    if collection == "novels":
+        return "novel"
+    if collection in {
+        "adventures",
+        "memoirs",
+        "return",
+        "his_last_bow",
+        "case_book",
+    }:
+        return "short_story"
+    return "unknown"
+
+
+def _extract_characters(text: str) -> list[str]:
+    """Heuristically extract major recurring characters present in the text.
+
+    This is intentionally conservative: we only mark a character as present
+    if their name (or a distinctive part of it) occurs in the story text.
+    """
+    lowered = text.lower()
+    found: set[str] = set()
+
+    for cfg in CHARACTERS.values():
+        name = cfg.get("name", "")
+        if not name:
+            continue
+        # Match either the full name or the surname as a rough heuristic.
+        parts = name.split()
+        surname = parts[-1].lower() if parts else ""
+        if name.lower() in lowered or (surname and surname in lowered):
+            found.add(name)
+
+    return sorted(found)
+
+
 def load_documents() -> Iterator[dict]:
-    """Yield documents from all .txt files in raw/."""
+    """Yield documents from all .txt files in raw/ with rich metadata."""
     for path in sorted(RAW_DIR.rglob("*.txt")):
         try:
             text = path.read_text(encoding="utf-8")
@@ -51,7 +88,9 @@ def load_documents() -> Iterator[dict]:
         rel = str(path.relative_to(RAW_DIR))
         sid, title, year = _parse_filename(path)
         collection = _infer_collection(rel)
+        story_type = _infer_story_type(collection)
         title_human = re.sub(r"-", " ", title).title()
+        characters = _extract_characters(text)
 
         yield {
             "id": path.stem,
@@ -59,5 +98,7 @@ def load_documents() -> Iterator[dict]:
             "title": title_human,
             "collection": collection,
             "year": year,
+            "story_type": story_type,
+            "characters": characters,
             "content": text,
         }

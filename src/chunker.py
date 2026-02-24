@@ -27,7 +27,7 @@ def chunk_document(
     chunk_size: int = 512,
     chunk_overlap: int = 64,
 ) -> Iterator[dict]:
-    """Split a document into chunks with metadata."""
+    """Split a document into chunks with metadata suitable for retrieval."""
     content = doc["content"]
     paragraphs = split_into_paragraphs(content)
 
@@ -44,4 +44,7 @@ def chunk_document(
                 "title": doc["title"],
                 "collection": doc["collection"],
                 "year": doc.get("year", ""),
+                "story_type": doc.get("story_type", ""),
+                "characters": doc.get("characters", []),
+                "chunk_index": i,
             }
