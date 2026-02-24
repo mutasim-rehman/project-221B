@@ -155,9 +155,6 @@ def generate_character_reply(
     history: list[tuple[str, str]],
 ) -> str:
     """Generate an in-character reply for the chosen persona."""
-    cached = get_cached_answer(Mode.CHARACTER_CHAT.value, query, character_key)
-    if cached is not None:
-        return cached
     cfg = CHARACTERS[character_key]
     char_name = cfg["name"]
     profile = cfg["profile"]
@@ -193,7 +190,6 @@ Respond with a single, concise in-character reply from {char_name}."""
     try:
         response = OLLAMA_CLIENT.chat(model=OLLAMA_MODEL, messages=[{"role": "user", "content": prompt}])
         reply = response["message"]["content"].strip()
-        store_answer(Mode.CHARACTER_CHAT.value, query, character_key, reply)
         return reply
     except Exception as e:
         err = str(e).lower()

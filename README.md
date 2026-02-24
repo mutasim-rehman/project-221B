@@ -124,6 +124,24 @@ This reduces the risk of malicious instructions being smuggled into the index.
 python eval/run_eval.py
 ```
 
+### Backend helpers (sessions, strictness, structured responses)
+
+- `src/session_memory.py` keeps an in-process, per-session memory of the last
+  few turns per `(session_id, mode, character)`; this is intended for future
+  API usage and is not persisted across processes.
+- `src/backend_api.py` exposes higher-level helpers:
+  - `canon_qa_turn(question, session_id, strictness="strict")` → `{ answer, sources, entities, mode, strictness }`.
+  - `character_chat_turn(character_key, question, session_id, strictness="strict")`
+    → `{ reply, character, sources, entities, mode, strictness }`.
+- These helpers:
+  - Use **per-session memory** from `session_memory` to include previous Q&A in
+    canon_qa prompts and previous turns in character chat.
+  - Implement **character-aware retrieval** (filtering chunks where the chosen
+    character appears) for character chat using metadata.
+  - Support a simple **canon strictness** profile (`strict`, `balanced`,
+    `creative`) that adjusts how much the model may extrapolate beyond the
+    passages.
+
 ### Deployment hygiene (recommended)
 
 - **Run under a non-privileged user** in production (no `root`).
