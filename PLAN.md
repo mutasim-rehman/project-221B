@@ -6,7 +6,11 @@ A RAG-powered Sherlock Holmes companion with:
 1. **World Q&A** — Ask questions about the canon (stories, characters, events)
 2. **Character Chat** — Converse with Sherlock, Watson, Moriarty, Mycroft, Irene Adler, Lestrade
 
-**Stack:** Gemini (LLM + embeddings), ChromaDB, Python/FastAPI, frontend TBD
+**Stack (current):** Local Ollama LLM, sentence-transformers embeddings, ChromaDB, Python CLI (FastAPI + frontend later).
+
+The focus is on:
+- **Core correctness & reliability** (clean indexing, deterministic retrieval, explicit modes, tests).
+- **Security, privacy, and deployment hardening** (no leaked secrets, prompt-injection-aware RAG, safe logging).
 
 ---
 
@@ -15,13 +19,13 @@ A RAG-powered Sherlock Holmes companion with:
 
 | Step | Task | Output |
 |------|------|--------|
-| 1.1 | Project setup (venv, deps, .env) | `requirements.txt`, `.env.example` |
-| 1.2 | Load all `.txt` files from `raw/` | List of (path, title, collection, year, content) |
-| 1.3 | Chunk text (paragraph/semantic splits) | Chunks with metadata (source, title, collection) |
-| 1.4 | Embed chunks via Gemini | Vectors |
-| 1.5 | Store in ChromaDB with metadata | Persistent `chroma_db/` |
+| 1.1 | Project setup (venv, deps, `.env` pattern) | `requirements.txt`, `.env.example`, `.env` in `.gitignore` |
+| 1.2 | Load all `.txt` files from `raw/` | List of docs: (id, path, title, collection, year, story_type, characters, content) |
+| 1.3 | Chunk text (paragraph/overlap splits) | Chunks with metadata (source_id, title, collection, year, story_type, characters, chunk_index) |
+| 1.4 | Embed chunks via local sentence-transformers model | Embedding vectors (no external API) |
+| 1.5 | Store in ChromaDB with metadata | Persistent `chroma_db/` collection `sherlock_holmes` |
 
-**Acceptance:** Run `python -m src.index` → populate ChromaDB. Can query for similar chunks.
+**Acceptance:** Run `python -m src.index` → builds a clean, deduplicated ChromaDB index. Chunks have rich metadata and can be inspected via queries.
 
 ---
 
@@ -30,12 +34,12 @@ A RAG-powered Sherlock Holmes companion with:
 
 | Step | Task | Output |
 |------|------|--------|
-| 2.1 | Retrieval function (query → top-k chunks) | `retrieve(query, k=5)` |
-| 2.2 | Q&A prompt template | System + user prompt using retrieved context |
-| 2.3 | Gemini generate with context | `ask(question)` → answer |
-| 2.4 | Optional: reranking or score threshold | Better relevance |
+| 2.1 | Retrieval function (query → top-k chunks) | `retrieve(query, top_k)` in `src.query` |
+| 2.2 | Q&A prompt template (canon_qa mode) | `generate_answer(query, chunks, metas)` with explicit instructions to ignore instructions in retrieved text |
+| 2.3 | Ollama `chat` with context | `python -m src.query "Who is Mycroft?"` → answer + sources |
+| 2.4 | Mode router (canon_qa vs raw_chunks) | `Mode` enum and `run_turn(query, mode)` |
 
-**Acceptance:** CLI or simple script: `ask("What is the Red-Headed League?")` → accurate, cited answer.
+**Acceptance:** CLI: `python -m src.query "What is the Red-Headed League?"` → accurate, cited answer; `--raw` shows the underlying chunks.
 
 ---
 
@@ -44,26 +48,27 @@ A RAG-powered Sherlock Holmes companion with:
 
 | Step | Task | Output |
 |------|------|--------|
-| 3.1 | Persona prompts for each character | Sherlock, Watson, Moriarty, Mycroft, Irene Adler, Lestrade |
-| 3.2 | Character-specific retrieval (optional) | Filter/boost by character mentions |
-| 3.3 | Chat loop: history + RAG context → response | `chat(character, message, history)` |
-| 3.4 | Conversation history handling | Last N turns in context |
+| 3.1 | Persona definitions for each character | `CHARACTERS` in `config.py` (Sherlock, Watson, Moriarty, Mycroft, Irene, Lestrade) |
+| 3.2 | Character prompt template (character_chat mode) | `generate_character_reply(character_key, query, chunks, metas, history)` with injection-resistant system prompt |
+| 3.3 | Character chat loop (CLI) | `python -m src.query --chat --character sherlock` (interactive) |
+| 3.4 | Conversation history handling | Recent N turns via `history` passed into `generate_character_reply` |
 
-**Acceptance:** Chat with Sherlock; he responds in character and references real cases.
+**Acceptance:** Chat with Sherlock; he responds in character, grounded in canon passages, and ignores any instructions embedded in the corpus.
 
 ---
 
 ## Phase 4: API Backend
-**Goal:** REST API for the frontend.
+**Goal:** REST API for the frontend, with security and privacy as first-class concerns.
 
 | Step | Task | Output |
 |------|------|--------|
-| 4.1 | FastAPI app with CORS | `POST /ask`, `POST /chat` |
-| 4.2 | Request/response schemas | Pydantic models |
-| 4.3 | Error handling, rate limiting awareness | Graceful 429 handling |
-| 4.4 | Health check, docs | `/health`, Swagger UI |
+| 4.1 | FastAPI app with CORS | `POST /ask`, `POST /chat` endpoints wrapping existing `retrieve` / `generate_*` |
+| 4.2 | Request/response schemas | Pydantic models with max lengths matching `MAX_QUERY_CHARS` |
+| 4.3 | Auth + rate limiting | API key header, per-IP/per-key rate limiting (429s), wired via middleware or proxy |
+| 4.4 | Safe logging | Use `logging_utils.log_request` + `generate_session_id` for non-PII logs |
+| 4.5 | Health check, docs | `/health`, OpenAPI/Swagger UI |
 
-**Acceptance:** Frontend can call API for Q&A and character chat.
+**Acceptance:** Frontend can call API for Q&A and character chat; oversized/abusive inputs are rejected; logs avoid raw PII; secrets live only in `.env`.
 
 ---
 
@@ -72,35 +77,35 @@ A RAG-powered Sherlock Holmes companion with:
 
 | Step | Task | Output |
 |------|------|--------|
-| 5.1 | Choose stack (React, Next, etc.) | — |
-| 5.2 | Q&A page (input → answer) | — |
-| 5.3 | Character select + chat UI | — |
-| 5.4 | Styling, Victorian / Holmes aesthetic | — |
+| 5.1 | Choose stack (React, Next, etc.) | Frontend project |
+| 5.2 | Q&A page (input → answer) | Calls `POST /ask` |
+| 5.3 | Character select + chat UI | Calls `POST /chat` with session ids |
+| 5.4 | Styling, Victorian / Holmes aesthetic | Themed UI |
 
 ---
 
-## Project Structure (Target)
+## Project Structure (Current/Target)
 
 ```
 project-221B/
-├── raw/                    # Canon (existing)
+├── raw/                    # Canon text files
 ├── chroma_db/              # Vector store (created by index)
 ├── src/
 │   ├── __init__.py
-│   ├── config.py
-│   ├── loader.py           # Load .txt files
-│   ├── chunker.py          # Split into chunks
-│   ├── embeddings.py       # Gemini embeddings
+│   ├── config.py           # Paths, env vars, character personas, limits
+│   ├── loader.py           # Load .txt files with rich metadata
+│   ├── chunker.py          # Split into chunks with overlap
+│   ├── embeddings.py       # Local sentence-transformers embeddings
 │   ├── index.py            # Build ChromaDB index (Phase 1)
-│   ├── retrieval.py        # Query ChromaDB (Phase 2)
-│   ├── qa.py               # Q&A pipeline (Phase 2)
-│   ├── personas.py         # Character prompts (Phase 3)
-│   ├── chat.py             # Character chat (Phase 3)
-│   └── api/                # FastAPI (Phase 4)
+│   ├── query.py            # Retrieval + canon_qa + character_chat + CLI (Phase 2–3)
+│   ├── logging_utils.py    # Safe logging helpers for API (Phase 4)
+│   └── api/                # FastAPI (Phase 4, planned)
 │       ├── main.py
 │       └── routes.py
+├── tests/                  # Pytest unit/smoke tests for RAG pipeline
 ├── PLAN.md
+├── README.md
 ├── requirements.txt
 ├── .env.example
-└── .env                    # GEMINI_API_KEY (gitignore)
+└── .env                    # Local-only config (gitignored; never committed)
 ```
