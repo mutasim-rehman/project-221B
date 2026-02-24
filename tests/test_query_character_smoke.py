@@ -12,7 +12,7 @@ def test_character_reply_smoke_sherlock(monkeypatch):
         captured["messages"] = messages
         return {"message": {"content": "I am Sherlock Holmes, a consulting detective."}}
 
-    monkeypatch.setattr("src.query.ollama.chat", fake_chat)
+    monkeypatch.setattr("src.query.OLLAMA_CLIENT.chat", fake_chat)
 
     chunks = ["Sherlock Holmes is a consulting detective in London."]
     metas = [{"title": "A Study in Scarlet"}]
@@ -34,7 +34,7 @@ def test_character_reply_smoke_watson(monkeypatch):
         captured["messages"] = messages
         return {"message": {"content": "I am Dr. John Watson, Holmes's friend and chronicler."}}
 
-    monkeypatch.setattr("src.query.ollama.chat", fake_chat)
+    monkeypatch.setattr("src.query.OLLAMA_CLIENT.chat", fake_chat)
 
     chunks = ["Dr. Watson narrates many of Holmes's cases."]
     metas = [{"title": "The Sign of Four"}]

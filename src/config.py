@@ -15,6 +15,12 @@ COLLECTION_NAME = "sherlock_holmes"
 
 # LLM (local via Ollama - no API key needed)
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2")
+# Maximum time to wait for a single Ollama generation (seconds).
+OLLAMA_TIMEOUT_SECONDS = int(os.getenv("OLLAMA_TIMEOUT_SECONDS", "60"))
+
+# Input validation / safety limits
+# Maximum length of a single user query (characters). Longer inputs are rejected.
+MAX_QUERY_CHARS = int(os.getenv("MAX_QUERY_CHARS", "2000"))
 
 # Chunking
 CHUNK_SIZE = 512

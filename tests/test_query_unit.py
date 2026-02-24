@@ -67,7 +67,7 @@ def test_generate_answer_builds_prompt_and_calls_ollama(monkeypatch):
         captured["messages"] = messages
         return {"message": {"content": "stubbed answer"}}
 
-    monkeypatch.setattr("src.query.ollama.chat", fake_chat)
+    monkeypatch.setattr("src.query.OLLAMA_CLIENT.chat", fake_chat)
 
     chunks = ["Sherlock Holmes lives at Baker Street."]
     metas = [{"title": "A Study in Scarlet"}]
@@ -86,7 +86,7 @@ def test_generate_character_reply_includes_profile_and_history(monkeypatch):
         captured["messages"] = messages
         return {"message": {"content": "stubbed character reply"}}
 
-    monkeypatch.setattr("src.query.ollama.chat", fake_chat)
+    monkeypatch.setattr("src.query.OLLAMA_CLIENT.chat", fake_chat)
 
     chunks = ["Watson narrates Holmes's exploits."]
     metas = [{"title": "The Sign of Four"}]
@@ -123,7 +123,7 @@ def test_end_to_end_canon_qa_smoke(monkeypatch):
     def fake_chat(model, messages):
         return {"message": {"content": "Sherlock Holmes is a consulting detective."}}
 
-    monkeypatch.setattr("src.query.ollama.chat", fake_chat)
+    monkeypatch.setattr("src.query.OLLAMA_CLIENT.chat", fake_chat)
 
     # We only care that retrieve() is invoked; we mock its output to avoid
     # requiring an actual Chroma index for this smoke test.
