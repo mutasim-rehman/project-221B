@@ -1,0 +1,84 @@
+:root {
+  --bg-deep: #050309;
+  --bg-panel: #141016;
+  --bg-card: #191216;
+  --bg-card-alt: #151219;
+  --bg parchment: #1f1811;
+  --accent-gold: #c5a46d;
+  --accent-gold-soft: #e0c79a;
+  --accent-green: #485946;
+  --accent-ink: #f5e9d2;
+  --accent-ink-muted: #c1b59a;
+  --accent-ink-faint: #8b7a61;
+  --border-soft: rgba(197, 164, 109, 0.25);
+  --shadow-soft: 0 24px 60px rgba(0, 0, 0, 0.8);
+  --radius-card: 18px;
+  --radius-pill: 999px;
+  --font-display: 'EB Garamond', 'Times New Roman', serif;
+  --font-body: 'Crimson Text', 'Georgia', 'Times New Roman', serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.04), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(197, 164, 109, 0.06), transparent 55%),
+    #050309;
+  color: var(--accent-ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+}
+
+::selection {
+  background: rgba(197, 164, 109, 0.4);
+  color: var(--accent-ink);
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(106, 87, 56, 0.7);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 164, 109, 0.95);
+}
