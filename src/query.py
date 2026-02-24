@@ -30,6 +30,12 @@ from src.config import (
     MAX_QUERY_CHARS,
 )
 from src.embeddings import get_embedding
+from src.logging_utils import (
+    generate_session_id,
+    get_request_logger,
+    log_rag_trace,
+    log_request,
+)
 
 
 class Mode(str, Enum):
@@ -191,7 +197,11 @@ Respond with a single, concise in-character reply from {char_name}."""
         raise
 
 
-def run_turn(query: str, mode: Mode) -> None:
+def _titles_from_metas(metas: list[dict]) -> list[str]:
+    return [m.get("title", "?") for m in metas]
+
+
+def run_turn(query: str, mode: Mode, logger, session_id: str) -> None:
     """Run a single non-character query and print the result."""
     if mode == Mode.RAW_CHUNKS:
         docs, metas = retrieve(query, top_k=TOP_K)
@@ -200,11 +210,31 @@ def run_turn(query: str, mode: Mode) -> None:
             print(f"--- Result {i} ({title}) ---")
             print(doc.strip())
             print()
+        log_rag_trace(
+            logger,
+            session_id=session_id,
+            mode=mode.value,
+            character_key=None,
+            user_input=query,
+            source_titles=_titles_from_metas(metas),
+            num_chunks=len(docs),
+            answer_length=0,
+        )
     elif mode == Mode.CANON_QA:
         docs, metas = retrieve(query, top_k=CHAT_TOP_K)
         answer = generate_answer(query, docs, metas)
         print(answer)
         print("\n(Sources:", ", ".join(m.get("title", "?") for m in metas), ")\n")
+        log_rag_trace(
+            logger,
+            session_id=session_id,
+            mode=mode.value,
+            character_key=None,
+            user_input=query,
+            source_titles=_titles_from_metas(metas),
+            num_chunks=len(docs),
+            answer_length=len(answer),
+        )
     else:
         raise ValueError(f"run_turn does not support mode {mode!r}")
 
@@ -252,6 +282,10 @@ def main() -> None:
         i += 1
 
     # Decide mode based on flags for clarity and testability.
+    # Per-process session id for CLI runs; suitable for correlating logs.
+    session_id = generate_session_id()
+    logger = get_request_logger()
+
     if chat_mode:
         mode = Mode.CHARACTER_CHAT if character_key is not None else Mode.CANON_QA
     else:
@@ -281,6 +315,12 @@ def main() -> None:
                 if len(query) > MAX_QUERY_CHARS:
                     print(f"Input too long ({len(query)} characters; maximum is {MAX_QUERY_CHARS}). Please shorten it.")
                     continue
+                log_request(
+                    logger,
+                    session_id=session_id,
+                    user_input=query,
+                    extra_fields={"mode": mode.value, "character": character_key},
+                )
                 print()
                 reply = run_character_turn(character_key, query, history)
                 history.append((query, reply))
@@ -300,8 +340,14 @@ def main() -> None:
                 if len(query) > MAX_QUERY_CHARS:
                     print(f"Input too long ({len(query)} characters; maximum is {MAX_QUERY_CHARS}). Please shorten it.")
                     continue
+                log_request(
+                    logger,
+                    session_id=session_id,
+                    user_input=query,
+                    extra_fields={"mode": Mode.CANON_QA.value, "character": None},
+                )
                 print()
-                run_turn(query, Mode.CANON_QA)
+                run_turn(query, Mode.CANON_QA, logger, session_id)
     else:
         if not query_parts:
             print("Usage: python -m src.query [--raw] [--chat] [--character <name>] <query>")
@@ -312,13 +358,19 @@ def main() -> None:
         if len(query) > MAX_QUERY_CHARS:
             print(f"Input too long ({len(query)} characters; maximum is {MAX_QUERY_CHARS}). Please shorten it.")
             sys.exit(1)
+        log_request(
+            logger,
+            session_id=session_id,
+            user_input=query,
+            extra_fields={"mode": mode.value, "character": character_key},
+        )
         if mode == Mode.CHARACTER_CHAT and character_key is not None:
             # One-off in-character answer.
             reply = run_character_turn(character_key, query, history=[])
             # No extra sources printed to keep immersion.
         else:
             print(f"\nMode: {mode.value}\nQuery: {query}\n")
-            run_turn(query, mode)
+            run_turn(query, mode, logger, session_id)
 
 
 if __name__ == "__main__":

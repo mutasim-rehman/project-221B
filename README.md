@@ -83,8 +83,26 @@ This reduces the risk of malicious instructions being smuggled into the index.
   - `generate_session_id()` for non-identifying session IDs.
   - `safe_trim_text()` to truncate and hash user text before logging.
   - `log_request()` to log structured events without dumping secrets or raw headers.
+  - `log_rag_trace()` to log, per turn, the (truncated) user query, chosen mode,
+    character (if any), top‑k source titles, and answer length.
 - When wiring an HTTP API, use these helpers instead of logging raw request
   bodies or environment variables.
+
+### Offline evaluation harness
+
+- `eval/canonical_questions.json` contains a small set of canonical questions
+  (e.g. “Who is Sherlock Holmes?”, “Who is Dr. John Watson?”) and expected
+  key phrases.
+- `eval/run_eval.py` runs the live RAG pipeline (retrieve + generate_answer)
+  over these questions and reports, for each:
+  - Which expected phrases were present in the answer.
+  - Answer length.
+  - Aggregate phrase-level recall across the set.
+- Run it after changes or before deployments:
+
+```bash
+python eval/run_eval.py
+```
 
 ### Deployment hygiene (recommended)
 

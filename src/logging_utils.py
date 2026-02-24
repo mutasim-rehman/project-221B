@@ -82,3 +82,35 @@ def log_request(
                 extra[k] = v
     logger.info("request text=%s", safe_text, extra=extra)
 
+
+def log_rag_trace(
+    logger: logging.Logger,
+    *,
+    session_id: str,
+    mode: str,
+    character_key: str | None,
+    user_input: str,
+    source_titles: list[str],
+    num_chunks: int,
+    answer_length: int,
+    is_error: bool = False,
+) -> None:
+    """Log a single RAG decision trace for audit/debugging.
+
+    This is intended for low-volume, high-value logs (e.g. CLI or sampled API
+    traffic) so that you can inspect whether retrieval choices make sense for
+    a given question.
+    """
+    safe_text = safe_trim_text(user_input, max_length=256)
+    extra: dict[str, Any] = {
+        "session_id": session_id,
+        "ip": "-",  # CLI and internal calls do not track IPs.
+        "mode": mode,
+        "character": character_key or "-",
+        "num_chunks": num_chunks,
+        "answer_length": answer_length,
+        "is_error": is_error,
+        "topk_titles": ", ".join(source_titles),
+    }
+    logger.info("rag_trace query=%s", safe_text, extra=extra)
+

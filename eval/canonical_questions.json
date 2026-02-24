@@ -1,0 +1,44 @@
+[
+  {
+    "id": "sherlock_identity",
+    "question": "Who is Sherlock Holmes?",
+    "expected_phrases": [
+      "consulting detective",
+      "Baker Street"
+    ]
+  },
+  {
+    "id": "watson_identity",
+    "question": "Who is Dr. John Watson?",
+    "expected_phrases": [
+      "doctor",
+      "friend",
+      "chronicle"
+    ]
+  },
+  {
+    "id": "moriarty_identity",
+    "question": "Who is Professor Moriarty?",
+    "expected_phrases": [
+      "Napoleon of crime",
+      "criminal mastermind"
+    ]
+  },
+  {
+    "id": "mycroft_identity",
+    "question": "Who is Mycroft Holmes?",
+    "expected_phrases": [
+      "brother",
+      "even greater powers of reasoning"
+    ]
+  },
+  {
+    "id": "lestrade_identity",
+    "question": "Who is Inspector Lestrade?",
+    "expected_phrases": [
+      "Scotland Yard",
+      "inspector"
+    ]
+  }
+]
+
