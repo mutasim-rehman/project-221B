@@ -29,7 +29,7 @@ from src.config import (
     CHARACTERS,
     MAX_QUERY_CHARS,
 )
-from src.embeddings import get_embedding
+from src.cache import get_embedding, get_cached_answer, store_answer
 from src.logging_utils import (
     generate_session_id,
     get_request_logger,
@@ -78,6 +78,10 @@ OLLAMA_CLIENT = Client(timeout=OLLAMA_TIMEOUT_SECONDS)
 
 def generate_answer(query: str, chunks: list[str], metas: list[dict]) -> str:
     """Use local Ollama (Llama) to synthesize a structured answer. No API, no quota."""
+    cached = get_cached_answer(Mode.CANON_QA.value, query, character_key=None)
+    if cached is not None:
+        return cached
+
     context = _build_context(chunks, metas)
     prompt = f"""You are a knowledgeable assistant about the Sherlock Holmes canon.
 
@@ -101,7 +105,9 @@ paragraphs). If the answer is not in the passages, say so."""
 
     try:
         response = OLLAMA_CLIENT.chat(model=OLLAMA_MODEL, messages=[{"role": "user", "content": prompt}])
-        return response["message"]["content"].strip()
+        answer = response["message"]["content"].strip()
+        store_answer(Mode.CANON_QA.value, query, character_key=None, answer=answer)
+        return answer
     except Exception as e:
         err = str(e).lower()
         if "connection" in err or "refused" in err or "connect" in err:
@@ -149,6 +155,9 @@ def generate_character_reply(
     history: list[tuple[str, str]],
 ) -> str:
     """Generate an in-character reply for the chosen persona."""
+    cached = get_cached_answer(Mode.CHARACTER_CHAT.value, query, character_key)
+    if cached is not None:
+        return cached
     cfg = CHARACTERS[character_key]
     char_name = cfg["name"]
     profile = cfg["profile"]
@@ -183,7 +192,9 @@ Respond with a single, concise in-character reply from {char_name}."""
 
     try:
         response = OLLAMA_CLIENT.chat(model=OLLAMA_MODEL, messages=[{"role": "user", "content": prompt}])
-        return response["message"]["content"].strip()
+        reply = response["message"]["content"].strip()
+        store_answer(Mode.CHARACTER_CHAT.value, query, character_key, reply)
+        return reply
     except Exception as e:
         err = str(e).lower()
         if "connection" in err or "refused" in err or "connect" in err:

@@ -77,6 +77,26 @@ This reduces the risk of malicious instructions being smuggled into the index.
   - Enforce request body size limits.
   - Add per-IP / per-API-key rate limiting (e.g. using a middleware or reverse proxy).
 
+### Caching
+
+- `src/cache.py` provides:
+  - An in-process **LRU cache for embeddings** used during retrieval, so repeated
+    questions (or repeated sub-questions) avoid recomputing sentence embeddings.
+  - A simple **answer cache** keyed by `(mode, question, character)` that stores
+    the full text answer for repeated queries in the same process.
+- Both caches are local to a single process and can be safely discarded between
+  deployments. They are purely optimisations and do not affect correctness.
+
+### User preference profiles
+
+- `src/preferences.py` implements a very small **file-backed preference store**
+  using `data/preferences.json`:
+  - `UserPreferences` fields: `favourite_character`, `strictness`, `verbosity`.
+  - `get_preferences(user_id)` / `set_preferences(user_id, prefs)` helpers.
+- This is primarily a hook for future authenticated APIs so you can:
+  - Default to a user's favourite character in chat.
+  - Honour per-user strictness/verbosity settings in prompts and responses.
+
 ### Safe logging
 
 - `src/logging_utils.py` provides helpers for **safe request logging**:
