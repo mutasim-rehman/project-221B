@@ -1,21 +1,28 @@
 :root {
-  --bg-deep: #050309;
-  --bg-panel: #141016;
-  --bg-card: #191216;
-  --bg-card-alt: #151219;
-  --bg parchment: #1f1811;
-  --accent-gold: #c5a46d;
-  --accent-gold-soft: #e0c79a;
-  --accent-green: #485946;
-  --accent-ink: #f5e9d2;
-  --accent-ink-muted: #c1b59a;
-  --accent-ink-faint: #8b7a61;
-  --border-soft: rgba(197, 164, 109, 0.25);
-  --shadow-soft: 0 24px 60px rgba(0, 0, 0, 0.8);
-  --radius-card: 18px;
+  /* Palette: muted ink on aged paper */
+  --page-background: #11100e;
+  --paper-light: #f7f1e1;
+  --paper-mid: #e2d6bf;
+  --paper-line: rgba(119, 102, 79, 0.45);
+  --ink-strong: #241c16;
+  --ink-soft: #4f4031;
+  --ink-faint: #7a6a55;
+  --accent-ruby: #6c2c29;
+  --accent-olive: #3f5245;
+  --accent-gold: #aa8350;
+  --border-soft: rgba(64, 52, 40, 0.55);
+  --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.7);
+  --radius-card: 14px;
   --radius-pill: 999px;
   --font-display: 'EB Garamond', 'Times New Roman', serif;
   --font-body: 'Crimson Text', 'Georgia', 'Times New Roman', serif;
+  /* Texture: torn newspaper headings (hero only) */
+  --texture-torn-headings: url('/textures/torn-newspaper-headings.jpg');
+  /* Legacy aliases so existing styles still resolve */
+  --accent-ink: var(--ink-strong);
+  --accent-ink-muted: var(--ink-soft);
+  --accent-ink-faint: var(--ink-faint);
+  --accent-gold-soft: var(--accent-gold);
 }
 
 *,
@@ -32,11 +39,9 @@ body {
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.04), transparent 55%),
-    radial-gradient(circle at bottom right, rgba(197, 164, 109, 0.06), transparent 55%),
-    #050309;
-  color: var(--accent-ink);
+  background-color: var(--page-background);
+  background-image: radial-gradient(circle at top left, rgba(255, 255, 255, 0.03), transparent 60%);
+  color: var(--ink-strong);
   font-family: var(--font-body);
   font-size: 16px;
   text-rendering: optimizeLegibility;
