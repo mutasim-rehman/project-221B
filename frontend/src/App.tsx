@@ -550,7 +550,7 @@ function App() {
                             Tone: <span>{character.tone}</span>
                           </div>
                           <span className="character-button">
-                            <span>Enter conversation</span>
+                            <span>Consult</span>
                             <span>↗</span>
                           </span>
                         </div>
@@ -558,44 +558,10 @@ function App() {
                     </button>
                   ))}
                 </div>
-
-                <h3 className="six-mode-heading">Six-character experiences</h3>
-                <p className="six-mode-lead">
-                  All six — {SIX_CHARACTER_NAMES} — in one setting.
-                </p>
-                <div className="six-mode-grid">
-                  <button
-                    type="button"
-                    className={`six-mode-card${activeSixMode === 'case_story' ? ' is-active' : ''}`}
-                    onClick={() => handleSelectSixMode('case_story')}
-                  >
-                    <div className="six-mode-icon" aria-hidden="true">📜</div>
-                    <div className="six-mode-body">
-                      <div className="six-mode-title">Case-based story</div>
-                      <p className="six-mode-summary">
-                        Choose a case or scenario. We generate a story episode involving all six characters.
-                      </p>
-                      <span className="six-mode-cta">Generate story</span>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    className={`six-mode-card${activeSixMode === 'chatroom' ? ' is-active' : ''}`}
-                    onClick={() => handleSelectSixMode('chatroom')}
-                  >
-                    <div className="six-mode-icon" aria-hidden="true">🪑</div>
-                    <div className="six-mode-body">
-                      <div className="six-mode-title">Character chatroom</div>
-                      <p className="six-mode-summary">
-                        Enter a room with all six. You participate; they converse and respond to your remarks.
-                      </p>
-                      <span className="six-mode-cta">Enter room</span>
-                    </div>
-                  </button>
-                </div>
               </section>
 
-              <aside className="ambient-panel" aria-label="Atmosphere and notes">
+              <div className="archive-sidebar">
+                <aside className="ambient-panel" aria-label="Atmosphere and notes">
                 <div className="ambient-header">
                   <div className="ambient-heading">Atmospherics</div>
                   <div className="ambient-tagline">Fog, ink, and deduction</div>
@@ -623,6 +589,46 @@ function App() {
                   </p>
                 </div>
               </aside>
+
+              <section className="six-mode-panel" aria-label="Six-character experiences">
+                <h3 className="six-mode-heading">Six-character experiences</h3>
+                <p className="six-mode-lead">
+                  All six — {SIX_CHARACTER_NAMES} — in one setting.
+                </p>
+                <div className="six-mode-grid">
+                  <button
+                    type="button"
+                    className={`six-mode-card${activeSixMode === 'case_story' ? ' is-active' : ''}`}
+                    onClick={() => handleSelectSixMode('case_story')}
+                  >
+                    <div className="six-mode-icon" aria-hidden="true">📜</div>
+                    <div className="six-mode-body">
+                      <div className="six-mode-title">Case-based story</div>
+                      <p className="six-mode-summary">
+                        Choose a case or scenario—a theft, a disappearance, a cipher. We generate a story episode
+                        involving all six characters, grounded in canon and woven into late Victorian London.
+                      </p>
+                      <span className="six-mode-btn">Generate story</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className={`six-mode-card${activeSixMode === 'chatroom' ? ' is-active' : ''}`}
+                    onClick={() => handleSelectSixMode('chatroom')}
+                  >
+                    <div className="six-mode-icon" aria-hidden="true">🪑</div>
+                    <div className="six-mode-body">
+                      <div className="six-mode-title">Character chatroom</div>
+                      <p className="six-mode-summary">
+                        Imagine a room at Baker Street—or elsewhere—where all six have gathered. You are present.
+                        Address them, pose a question, or introduce a topic. They converse and respond in character.
+                      </p>
+                      <span className="six-mode-btn">Enter room</span>
+                    </div>
+                  </button>
+                </div>
+              </section>
+              </div>
             </section>
           </div>
         </div>
