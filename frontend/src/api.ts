@@ -2,6 +2,9 @@
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string) || ''
 
+/** True when VITE_API_BASE is set (API expected to be available). */
+export const isApiConfigured = Boolean(API_BASE)
+
 export interface CaseStoryResponse {
   story: string
   characters: string[]
