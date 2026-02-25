@@ -2,11 +2,30 @@ import { type FormEvent, useMemo, useState } from 'react'
 import './App.css'
 import { fetchCaseStory, fetchChatroomTurn } from './api'
 
+import sherlockImg from '../resources/sherlock.png'
+import watsonImg from '../resources/watson.png'
+import moriartyImg from '../resources/moriarty.png'
+import ireneImg from '../resources/irene.png'
+import mycroftImg from '../resources/mycroft.png'
+import lestradeImg from '../resources/lestrade.png'
+import sherlockWatsonImg from '../resources/sherlock+watson.png'
+import fullCastImg from '../resources/sherlock+watson+mycroft+irene.png'
+import atmosphericsImg from '../resources/atmospherics.jpg'
+
 type CharacterKey = 'sherlock' | 'watson' | 'moriarty' | 'irene' | 'mycroft' | 'lestrade'
 
 type SixMode = 'case_story' | 'chatroom'
 
 type Speaker = 'user' | 'character'
+
+const CHARACTER_IMAGES: Record<CharacterKey, string> = {
+  sherlock: sherlockImg,
+  watson: watsonImg,
+  moriarty: moriartyImg,
+  irene: ireneImg,
+  mycroft: mycroftImg,
+  lestrade: lestradeImg,
+}
 
 interface CharacterConfig {
   key: CharacterKey
@@ -185,10 +204,20 @@ function JournalEntry({ message, character }: JournalEntryProps) {
       aria-label={`${label} — ${speakerLabel}`}
     >
       <header className="journal-header">
-        <div className="journal-label">
-          <strong>{label}</strong> — {speakerLabel}
+        {!isUser && (
+          <img
+            src={CHARACTER_IMAGES[character.key]}
+            alt=""
+            className="journal-avatar"
+            aria-hidden="true"
+          />
+        )}
+        <div className="journal-header-text">
+          <div className="journal-label">
+            <strong>{label}</strong> — {speakerLabel}
+          </div>
+          <div className="journal-meta">{message.createdAt}</div>
         </div>
-        <div className="journal-meta">{message.createdAt}</div>
       </header>
       <div className="journal-body">{message.text}</div>
       {!isUser && (
@@ -537,7 +566,11 @@ function App() {
                       onClick={() => handleSelectCharacter(character)}
                     >
                       <div className="portrait-frame" aria-hidden="true">
-                        <div className="portrait-silhouette" />
+                        <img
+                          src={CHARACTER_IMAGES[character.key]}
+                          alt=""
+                          className="portrait-image"
+                        />
                       </div>
                       <div className="character-body">
                         <div>
@@ -562,6 +595,9 @@ function App() {
 
               <div className="archive-sidebar">
                 <aside className="ambient-panel" aria-label="Atmosphere and notes">
+                <div className="ambient-illustration">
+                  <img src={atmosphericsImg} alt="" aria-hidden="true" />
+                </div>
                 <div className="ambient-header">
                   <div className="ambient-heading">Atmospherics</div>
                   <div className="ambient-tagline">Fog, ink, and deduction</div>
@@ -601,7 +637,9 @@ function App() {
                     className={`six-mode-card${activeSixMode === 'case_story' ? ' is-active' : ''}`}
                     onClick={() => handleSelectSixMode('case_story')}
                   >
-                    <div className="six-mode-icon" aria-hidden="true">📜</div>
+                    <div className="six-mode-icon" aria-hidden="true">
+                      <img src={sherlockWatsonImg} alt="" className="six-mode-illustration" />
+                    </div>
                     <div className="six-mode-body">
                       <div className="six-mode-title">Case-based story</div>
                       <p className="six-mode-summary">
@@ -616,7 +654,9 @@ function App() {
                     className={`six-mode-card${activeSixMode === 'chatroom' ? ' is-active' : ''}`}
                     onClick={() => handleSelectSixMode('chatroom')}
                   >
-                    <div className="six-mode-icon" aria-hidden="true">🪑</div>
+                    <div className="six-mode-icon" aria-hidden="true">
+                      <img src={fullCastImg} alt="" className="six-mode-illustration" />
+                    </div>
                     <div className="six-mode-body">
                       <div className="six-mode-title">Character chatroom</div>
                       <p className="six-mode-summary">
@@ -640,6 +680,13 @@ function App() {
     <div className="archive-shell">
       <div className="archive-inner archive-inner--chat">
         <aside className="sidebar-card" aria-label="Character details">
+          <div className="sidebar-portrait">
+            <img
+              src={CHARACTER_IMAGES[activeCharacter.key]}
+              alt=""
+              aria-hidden="true"
+            />
+          </div>
           <div className="sidebar-header">
             <div className="sidebar-title">
               <div className="sidebar-label">Consulting correspondent</div>
