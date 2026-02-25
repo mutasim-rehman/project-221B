@@ -43,6 +43,28 @@ This:
 - Chunks and de-duplicates paragraphs.
 - Embeds and indexes them into a local ChromaDB directory (`chroma_db/`).
 
+### Local testing (frontend + API)
+
+To run the frontend and backend together for local testing:
+
+1. **Start the API server** (from project root):
+
+```bash
+python -m src.api.main
+# or: uvicorn src.api.main:app --reload --port 8000
+```
+
+2. **Start the frontend** (in another terminal):
+
+```bash
+cd frontend
+npm run dev
+```
+
+The frontend defaults to `http://localhost:8000` in dev mode, so no extra config is needed. Ensure the index is built (`python -m src.index`), Ollama is running with the model, and the ChromaDB collection exists.
+
+For production (e.g. frontend on Vercel, backend on DigitalOcean), set `VITE_API_BASE` to your backend URL when building the frontend.
+
 ### Query modes
 
 The CLI supports three explicit modes:

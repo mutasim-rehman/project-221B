@@ -68,26 +68,6 @@ export async function fetchChatroomTurn(question: string, strictness = 'balanced
   }
 }
 
-function mockCaseStory(casePrompt: string): CaseStoryResponse {
-  const prompts: Record<string, string> = {
-    default:
-      'The gas lamps had barely been lit along Pall Mall when a most singular delegation arrived at 221B. Sherlock Holmes, Dr. Watson, Professor Moriarty, Irene Adler, Inspector Lestrade, and Mycroft Holmes found themselves convened—each for reasons they would only gradually reveal. The case, as Watson would later record it, began with a cipher and ended with a truth no single mind could have deduced alone.',
-  }
-  const story =
-    prompts[casePrompt.toLowerCase().slice(0, 20)] ??
-    prompts.default.replace(
-      'The case, as Watson would later record it',
-      `The case—${casePrompt.slice(0, 80)}${casePrompt.length > 80 ? '…' : ''}—as Watson would later record it`
-    )
-  return {
-    story,
-    characters: ['Sherlock Holmes', 'Dr. John Watson', 'Professor James Moriarty', 'Irene Adler', 'Inspector G. Lestrade', 'Mycroft Holmes'],
-    sources: ['A Study in Scarlet', 'The Sign of Four'],
-    mode: 'six_case_story',
-    setting: 'case_story',
-  }
-}
-
 function mockChatroomTurn(_question: string): ChatroomResponse {
   const scene = `Sherlock Holmes: You raise a most intriguing point. Watson, you have observed the same irregularity in the timeline?
 
@@ -106,5 +86,25 @@ Mycroft Holmes: The matter will resolve itself when the relevant papers are cons
     sources: ['The Red-Headed League', 'A Scandal in Bohemia'],
     mode: 'six_chatroom',
     setting: 'room_conversation',
+  }
+}
+
+function mockCaseStory(casePrompt: string): CaseStoryResponse {
+  const prompts: Record<string, string> = {
+    default:
+      'The gas lamps had barely been lit along Pall Mall when a most singular delegation arrived at 221B. Sherlock Holmes, Dr. Watson, Professor Moriarty, Irene Adler, Inspector Lestrade, and Mycroft Holmes found themselves convened—each for reasons they would only gradually reveal. The case, as Watson would later record it, began with a cipher and ended with a truth no single mind could have deduced alone.',
+  }
+  const story =
+    prompts[casePrompt.toLowerCase().slice(0, 20)] ??
+    prompts.default.replace(
+      'The case, as Watson would later record it',
+      `The case—${casePrompt.slice(0, 80)}${casePrompt.length > 80 ? '…' : ''}—as Watson would later record it`
+    )
+  return {
+    story,
+    characters: ['Sherlock Holmes', 'Dr. John Watson', 'Professor James Moriarty', 'Irene Adler', 'Inspector G. Lestrade', 'Mycroft Holmes'],
+    sources: ['A Study in Scarlet', 'The Sign of Four'],
+    mode: 'six_case_story',
+    setting: 'case_story',
   }
 }
