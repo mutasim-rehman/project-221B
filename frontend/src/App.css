@@ -387,6 +387,110 @@
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.75);
 }
 
+/* Six-character mode cards */
+
+.six-mode-heading {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  margin: 20px 0 4px;
+}
+
+.six-mode-heading::before {
+  content: '';
+  display: block;
+  height: 1px;
+  background: rgba(197, 164, 109, 0.4);
+  margin-bottom: 12px;
+}
+
+.six-mode-lead {
+  font-size: 0.88rem;
+  color: var(--accent-ink-muted);
+  margin: 0 0 12px;
+}
+
+.six-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.six-mode-card {
+  position: relative;
+  border-radius: 10px;
+  border: 1px solid rgba(102, 84, 60, 0.9);
+  background-color: var(--paper-mid);
+  padding: 12px 12px 11px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 160ms ease-out,
+    box-shadow 180ms ease-out,
+    transform 160ms ease-out;
+}
+
+.six-mode-card:hover {
+  border-color: rgba(123, 101, 70, 1);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+.six-mode-card.is-active {
+  border-color: var(--accent-ruby);
+  box-shadow: 0 0 0 1px rgba(108, 44, 41, 0.65);
+}
+
+.six-mode-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.six-mode-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.six-mode-title {
+  font-family: var(--font-display);
+  font-size: 0.94rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+}
+
+.six-mode-summary {
+  font-size: 0.84rem;
+  color: var(--accent-ink-muted);
+  margin: 0;
+}
+
+.six-mode-cta {
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-gold-soft);
+  margin-top: 2px;
+}
+
+.case-story-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.chatroom-scene {
+  font-family: var(--font-body, inherit);
+}
+
 .ambient-panel {
   padding: 16px 16px 14px;
 }

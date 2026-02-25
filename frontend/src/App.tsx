@@ -1,7 +1,10 @@
-import { FormEvent, useMemo, useState } from 'react'
+import { type FormEvent, useMemo, useState } from 'react'
 import './App.css'
+import { fetchCaseStory, fetchChatroomTurn } from './api'
 
-type CharacterKey = 'sherlock' | 'watson' | 'moriarty' | 'irene'
+type CharacterKey = 'sherlock' | 'watson' | 'moriarty' | 'irene' | 'mycroft' | 'lestrade'
+
+type SixMode = 'case_story' | 'chatroom'
 
 type Speaker = 'user' | 'character'
 
@@ -58,6 +61,24 @@ const CHARACTERS: CharacterConfig[] = [
     tone: 'Wry, self‑possessed, incisive.',
     signature: 'I.A.',
   },
+  {
+    key: 'mycroft',
+    name: 'Mycroft Holmes',
+    title: 'Government Functionary',
+    summary:
+      'Sherlock’s elder brother: greater powers of reasoning, but physically indolent. Speaks with authority and brevity, often alluding to affairs of state.',
+    tone: 'Concise, formal, cryptic.',
+    signature: 'M.H.',
+  },
+  {
+    key: 'lestrade',
+    name: 'Inspector G. Lestrade',
+    title: 'Scotland Yard Inspector',
+    summary:
+      'Energetic, dogged, occasionally brusque. Respects Holmes’s methods but remains proud of official police work and procedure.',
+    tone: 'Straightforward, practical, no-nonsense.',
+    signature: 'G.L.',
+  },
 ]
 
 function formatTimestamp(date: Date): string {
@@ -80,7 +101,11 @@ function buildInitialWelcome(character: CharacterConfig): Message[] {
       ? 'Your particulars will be recorded with care.'
       : character.key === 'moriarty'
       ? 'A most curious problem presents itself.'
-      : 'You have the attention of a most singular correspondent.'
+      : character.key === 'irene'
+      ? 'You have the attention of a most singular correspondent.'
+      : character.key === 'mycroft'
+      ? 'Communications received. State the matter.'
+      : 'Inspector Lestrade, Scotland Yard. Get to the point.'
 
   const body =
     character.key === 'sherlock'
@@ -89,7 +114,11 @@ function buildInitialWelcome(character: CharacterConfig): Message[] {
       ? 'Tell me, in your own words, what weighs upon your mind. I shall do my best to arrange the narrative and, where needful, to consult Holmes.'
       : character.key === 'moriarty'
       ? 'State the problem without ornament. Every system has its weak points; it is merely a question of discovering where the pressure should be applied.'
-      : 'You may be assured that whatever you confide will go no farther than is advantageous to us both. Begin where the story truly starts, not where convention would have it begin.'
+      : character.key === 'irene'
+      ? 'You may be assured that whatever you confide will go no farther than is advantageous to us both. Begin where the story truly starts, not where convention would have it begin.'
+      : character.key === 'mycroft'
+      ? 'Be brief. I have little time for digression. The essential facts, in order of importance.'
+      : 'Evidence and procedure, that’s what counts. Give me the facts, and we’ll see what the law makes of them.'
 
   return [
     {
@@ -120,9 +149,15 @@ async function mockCharacterReply(character: CharacterConfig, question: string):
   } else if (character.key === 'moriarty') {
     reflection =
       'You stand, perhaps without knowing it, at the edge of a very intricate web. Before you proceed, be certain you understand what you are prepared to pay for a resolution.'
-  } else {
+  } else if (character.key === 'irene') {
     reflection =
       'There is more to this than you have yet chosen to say. Consider carefully what you wish to reveal, and then tell me the part that matters most to you.'
+  } else if (character.key === 'mycroft') {
+    reflection =
+      'The picture is incomplete. Supply the missing elements, and I will determine whether the matter warrants further attention.'
+  } else {
+    reflection =
+      'I need names, dates, and what you saw. Nothing else will do. When you have them, come back.'
   }
 
   const now = new Date()
@@ -165,11 +200,17 @@ function JournalEntry({ message, character }: JournalEntryProps) {
   )
 }
 
+const SIX_CHARACTER_NAMES =
+  'Sherlock Holmes, Dr. John Watson, Professor Moriarty, Irene Adler, Inspector Lestrade, and Mycroft Holmes'
+
 function App() {
   const [activeKey, setActiveKey] = useState<CharacterKey | null>(null)
+  const [activeSixMode, setActiveSixMode] = useState<SixMode | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [draft, setDraft] = useState('')
   const [isAwaitingReply, setIsAwaitingReply] = useState(false)
+  const [caseStory, setCaseStory] = useState<string | null>(null)
+  const [chatroomScenes, setChatroomScenes] = useState<{ id: string; userText: string; scene: string; createdAt: string }[]>([])
 
   const activeCharacter = useMemo(
     () => CHARACTERS.find((c) => c.key === activeKey) ?? null,
@@ -178,16 +219,32 @@ function App() {
 
   const handleSelectCharacter = (character: CharacterConfig) => {
     setActiveKey(character.key)
+    setActiveSixMode(null)
     setMessages(buildInitialWelcome(character))
     setDraft('')
     setIsAwaitingReply(false)
+    setCaseStory(null)
+    setChatroomScenes([])
   }
 
-  const handleReturnToArchive = () => {
+  const handleSelectSixMode = (mode: SixMode) => {
+    setActiveSixMode(mode)
     setActiveKey(null)
     setMessages([])
     setDraft('')
     setIsAwaitingReply(false)
+    setCaseStory(null)
+    setChatroomScenes([])
+  }
+
+  const handleReturnToArchive = () => {
+    setActiveKey(null)
+    setActiveSixMode(null)
+    setMessages([])
+    setDraft('')
+    setIsAwaitingReply(false)
+    setCaseStory(null)
+    setChatroomScenes([])
   }
 
   const handleSubmit = async (event: FormEvent) => {
@@ -214,6 +271,216 @@ function App() {
     } finally {
       setIsAwaitingReply(false)
     }
+  }
+
+  if (activeSixMode === 'case_story') {
+    return (
+      <div className="archive-shell">
+        <div className="archive-inner archive-inner--chat">
+          <aside className="sidebar-card" aria-label="Case story mode">
+            <div className="sidebar-header">
+              <div className="sidebar-title">
+                <div className="sidebar-label">Six-character mode</div>
+                <div className="sidebar-character-name">Case-based story</div>
+              </div>
+              <button
+                type="button"
+                className="sidebar-back"
+                onClick={handleReturnToArchive}
+                aria-label="Return to the main archives"
+              >
+                <span>←</span>
+                <span>Back to archives</span>
+              </button>
+            </div>
+            <div className="sidebar-meta">
+              <strong>Generate a story</strong>
+              <br />
+              Describe a case or scenario. The system will generate a short story episode featuring{' '}
+              {SIX_CHARACTER_NAMES}.
+            </div>
+          </aside>
+          <main className="chat-shell" aria-label="Case story">
+            <header className="chat-header">
+              <div>
+                <div className="chat-heading">Case-based story — <span>all six characters</span></div>
+                <div className="chat-subtitle">
+                  Enter a case prompt below. The story is grounded in canon and generated with the full cast.
+                </div>
+              </div>
+            </header>
+            {!caseStory ? (
+              <form
+                className="chat-input-row case-story-form"
+                onSubmit={async (e: FormEvent) => {
+                  e.preventDefault()
+                  const trimmed = draft.trim()
+                  if (!trimmed || isAwaitingReply) return
+                  setIsAwaitingReply(true)
+                  setDraft('')
+                  try {
+                    const res = await fetchCaseStory(trimmed)
+                    setCaseStory(res.story)
+                  } finally {
+                    setIsAwaitingReply(false)
+                  }
+                }}
+              >
+                <div className="chat-input">
+                  <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder="e.g. A jewel theft at the Diogenes Club that implicates a government official…"
+                    aria-label="Case prompt"
+                  />
+                </div>
+                <button
+                  className="chat-submit"
+                  type="submit"
+                  disabled={!draft.trim() || isAwaitingReply}
+                >
+                  <span>✉</span>
+                  <span>{isAwaitingReply ? 'Generating…' : 'Generate story'}</span>
+                </button>
+              </form>
+            ) : (
+              <section className="chat-journal">
+                <article className="journal-entry journal-entry--character">
+                  <header className="journal-header">
+                    <div className="journal-label"><strong>Story</strong> — Generated episode</div>
+                  </header>
+                  <div className="journal-body" style={{ whiteSpace: 'pre-wrap' }}>{caseStory}</div>
+                </article>
+              </section>
+            )}
+          </main>
+        </div>
+      </div>
+    )
+  }
+
+  if (activeSixMode === 'chatroom') {
+    return (
+      <div className="archive-shell">
+        <div className="archive-inner archive-inner--chat">
+          <aside className="sidebar-card" aria-label="Chatroom mode">
+            <div className="sidebar-header">
+              <div className="sidebar-title">
+                <div className="sidebar-label">Six-character mode</div>
+                <div className="sidebar-character-name">Character chatroom</div>
+              </div>
+              <button
+                type="button"
+                className="sidebar-back"
+                onClick={handleReturnToArchive}
+                aria-label="Return to the main archives"
+              >
+                <span>←</span>
+                <span>Back to archives</span>
+              </button>
+            </div>
+            <div className="sidebar-meta">
+              <strong>You are in the room</strong>
+              <br />
+              {SIX_CHARACTER_NAMES} are present. Type a message to steer the conversation; they will respond in character.
+            </div>
+          </aside>
+          <main className="chat-shell" aria-label="Chatroom conversation">
+            <header className="chat-header">
+              <div>
+                <div className="chat-heading">Character chatroom</div>
+                <div className="chat-subtitle">
+                  All six characters in one room. Your messages guide the discussion.
+                </div>
+              </div>
+            </header>
+            <section className="chat-journal">
+              {chatroomScenes.length === 0 && (
+                <article className="journal-entry journal-entry--character">
+                  <header className="journal-header">
+                    <div className="journal-label"><strong>Scene</strong> — The room awaits</div>
+                  </header>
+                  <div className="journal-body">
+                    The six have gathered. Address them — pose a question, introduce a topic, or describe a situation. They will respond.
+                  </div>
+                </article>
+              )}
+              {chatroomScenes.map(({ id, userText, scene, createdAt }) => (
+                <div key={id}>
+                  <article className="journal-entry journal-entry--user">
+                    <header className="journal-header">
+                      <div className="journal-label"><strong>You</strong></div>
+                      <div className="journal-meta">{createdAt}</div>
+                    </header>
+                    <div className="journal-body">{userText}</div>
+                  </article>
+                  <article className="journal-entry journal-entry--character">
+                    <header className="journal-header">
+                      <div className="journal-label"><strong>Room dialogue</strong></div>
+                      <div className="journal-meta">{createdAt}</div>
+                    </header>
+                    <div className="journal-body chatroom-scene" style={{ whiteSpace: 'pre-wrap' }}>
+                      {scene}
+                    </div>
+                  </article>
+                </div>
+              ))}
+            </section>
+            <form
+              className="chat-input-row"
+              onSubmit={async (e: FormEvent) => {
+                e.preventDefault()
+                const trimmed = draft.trim()
+                if (!trimmed || isAwaitingReply) return
+                const now = new Date()
+                const userText = trimmed
+                setDraft('')
+                setIsAwaitingReply(true)
+                setChatroomScenes((prev) => [
+                  ...prev,
+                  {
+                    id: makeId(),
+                    userText,
+                    scene: '…',
+                    createdAt: formatTimestamp(now),
+                  },
+                ])
+                try {
+                  const res = await fetchChatroomTurn(trimmed)
+                  setChatroomScenes((prev) => {
+                    const next = [...prev]
+                    const last = next[next.length - 1]
+                    if (last && last.scene === '…') {
+                      next[next.length - 1] = { ...last, scene: res.scene }
+                    }
+                    return next
+                  })
+                } finally {
+                  setIsAwaitingReply(false)
+                }
+              }}
+            >
+              <div className="chat-input">
+                <textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder="Address the room…"
+                  aria-label="Message to the room"
+                />
+              </div>
+              <button
+                className="chat-submit"
+                type="submit"
+                disabled={!draft.trim() || isAwaitingReply}
+              >
+                <span>✉</span>
+                <span>{isAwaitingReply ? 'Awaiting reply…' : 'Send'}</span>
+              </button>
+            </form>
+          </main>
+        </div>
+      </div>
+    )
   }
 
   if (!activeCharacter) {
@@ -290,6 +557,41 @@ function App() {
                       </div>
                     </button>
                   ))}
+                </div>
+
+                <h3 className="six-mode-heading">Six-character experiences</h3>
+                <p className="six-mode-lead">
+                  All six — {SIX_CHARACTER_NAMES} — in one setting.
+                </p>
+                <div className="six-mode-grid">
+                  <button
+                    type="button"
+                    className={`six-mode-card${activeSixMode === 'case_story' ? ' is-active' : ''}`}
+                    onClick={() => handleSelectSixMode('case_story')}
+                  >
+                    <div className="six-mode-icon" aria-hidden="true">📜</div>
+                    <div className="six-mode-body">
+                      <div className="six-mode-title">Case-based story</div>
+                      <p className="six-mode-summary">
+                        Choose a case or scenario. We generate a story episode involving all six characters.
+                      </p>
+                      <span className="six-mode-cta">Generate story</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className={`six-mode-card${activeSixMode === 'chatroom' ? ' is-active' : ''}`}
+                    onClick={() => handleSelectSixMode('chatroom')}
+                  >
+                    <div className="six-mode-icon" aria-hidden="true">🪑</div>
+                    <div className="six-mode-body">
+                      <div className="six-mode-title">Character chatroom</div>
+                      <p className="six-mode-summary">
+                        Enter a room with all six. You participate; they converse and respond to your remarks.
+                      </p>
+                      <span className="six-mode-cta">Enter room</span>
+                    </div>
+                  </button>
                 </div>
               </section>
 
