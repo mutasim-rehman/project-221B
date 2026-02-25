@@ -18,6 +18,8 @@ from src.query import (
     Mode,
     generate_answer,
     generate_character_reply,
+    generate_case_story_reply,
+    generate_chatroom_reply,
     generate_ooc_explanation,
     generate_scene_reply,
     retrieve,
@@ -282,5 +284,90 @@ def scene_chat_turn(
         "entities": _entities_from_metas(metas),
         "mode": Mode.SCENE_CHAT.value,
         "strictness": strictness,
+    }
+
+
+SIX_CHATROOM_KEYS = ["sherlock", "watson", "moriarty", "irene", "lestrade", "mycroft"]
+
+
+def six_character_chatroom_turn(
+    question: str,
+    session_id: str,
+    strictness: str = "balanced",
+) -> Dict[str, Any]:
+    """Run a 6-character chatroom turn (Sherlock, John, Moriarty, Irene, Lestrade, Mycroft).
+
+    The user is assumed to be present in the room; the model should not generate
+    dialogue lines for the user, but may address them as 'you'.
+    """
+    # Map the user's requested names to configured character keys.
+    # Note: config uses "watson" key (not "john"). We accept "john" in the roster for readability.
+    keys = ["sherlock", "watson", "moriarty", "irene", "lestrade", "mycroft"]
+
+    docs, metas = retrieve(question, top_k=CHAT_TOP_K)
+
+    chatroom_id = "chatroom:" + "+".join(keys)
+    history = get_history(session_id, Mode.SIX_CHATROOM.value, chatroom_id)
+
+    strict_text = _strictness_preamble(strictness)
+    question_for_llm = f"{question}\n\nStrictness profile: {strictness}.\n{strict_text}" if strictness else question
+
+    scene_text = generate_chatroom_reply(keys, question_for_llm, docs, metas, history, include_user_in_room=True)
+
+    append_turn(
+        session_id,
+        Mode.SIX_CHATROOM.value,
+        chatroom_id,
+        user_text=question,
+        assistant_text=scene_text,
+    )
+
+    characters = [CHARACTERS[k]["name"] for k in keys]
+    return {
+        "scene": scene_text,
+        "characters": characters,
+        "sources": _titles_from_metas(metas),
+        "entities": _entities_from_metas(metas),
+        "mode": Mode.SIX_CHATROOM.value,
+        "strictness": strictness,
+        "setting": "room_conversation",
+    }
+
+
+def six_character_case_story(
+    case_prompt: str,
+    session_id: str,
+    strictness: str = "creative",
+) -> Dict[str, Any]:
+    """Generate a story episode for a user-selected case involving all six characters."""
+    keys = ["sherlock", "watson", "moriarty", "irene", "lestrade", "mycroft"]
+
+    docs, metas = retrieve(case_prompt, top_k=CHAT_TOP_K)
+
+    story_id = "case_story:" + "+".join(keys)
+    history = get_history(session_id, Mode.SIX_CASE_STORY.value, story_id)
+
+    strict_text = _strictness_preamble(strictness)
+    prompt_for_llm = f"{case_prompt}\n\nStrictness profile: {strictness}.\n{strict_text}" if strictness else case_prompt
+
+    story_text = generate_case_story_reply(keys, prompt_for_llm, docs, metas, history)
+
+    append_turn(
+        session_id,
+        Mode.SIX_CASE_STORY.value,
+        story_id,
+        user_text=case_prompt,
+        assistant_text=story_text,
+    )
+
+    characters = [CHARACTERS[k]["name"] for k in keys]
+    return {
+        "story": story_text,
+        "characters": characters,
+        "sources": _titles_from_metas(metas),
+        "entities": _entities_from_metas(metas),
+        "mode": Mode.SIX_CASE_STORY.value,
+        "strictness": strictness,
+        "setting": "case_story",
     }
 

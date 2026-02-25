@@ -355,8 +355,8 @@
   border-radius: 999px;
   border: 1px solid rgba(197, 164, 109, 0.9);
   background:
-    radial-gradient(circle at top left, rgba(197, 164, 109, 0.2), transparent 60%),
-    linear-gradient(135deg, rgba(51, 34, 20, 0.96), rgba(21, 14, 18, 0.96));
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.55), transparent 55%),
+    linear-gradient(135deg, #f3dfb6, #d0b487);
   color: var(--accent-ink);
   font-size: 0.78rem;
   letter-spacing: 0.16em;

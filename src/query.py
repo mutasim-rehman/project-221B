@@ -44,6 +44,8 @@ class Mode(str, Enum):
     RAW_CHUNKS = "raw_chunks"
     SCENE_CHAT = "scene_chat"
     OOC_EXPLAIN = "ooc_explain"
+    SIX_CHATROOM = "six_chatroom"
+    SIX_CASE_STORY = "six_case_story"
 
 
 def retrieve(query: str, top_k: int = TOP_K) -> tuple[list[str], list[dict]]:
@@ -172,6 +174,19 @@ def _format_scene_history(
     return header + "\n\n" + "\n\n".join(parts)
 
 
+def _format_story_history(history: list[tuple[str, str]], max_turns: int = 3) -> str:
+    """Render prior story turns (user prompt + story output)."""
+    if not history:
+        return "No prior story so far."
+    recent = history[-max_turns:]
+    parts: list[str] = []
+    for idx, (user_text, story_text) in enumerate(recent, 1):
+        parts.append(
+            f"Episode {idx} prompt:\n{user_text}\n\nEpisode {idx} story:\n{story_text}"
+        )
+    return "\n\n".join(parts)
+
+
 def generate_character_reply(
     character_key: str,
     query: str,
@@ -295,6 +310,158 @@ User instruction for the new scene:
 {query}
 
 Now write the next concise scene of dialogue between {names_str}, following the rules above. Respond only with the scene (speaker-tagged dialogue and any minimal stage directions)."""
+
+    try:
+        response = OLLAMA_CLIENT.chat(model=OLLAMA_MODEL, messages=[{"role": "user", "content": prompt}])
+        reply = response["message"]["content"].strip()
+        return reply
+    except Exception as e:
+        err = str(e).lower()
+        if "connection" in err or "refused" in err or "connect" in err:
+            return "Ollama is not running. Install from ollama.com, then run: ollama run llama3.2"
+        if "requires more system memory" in err or "more system memory" in err:
+            return (
+                "The configured Ollama model requires more system memory than is available.\n"
+                "Choose a smaller model (e.g. a 1B/2B variant), `ollama pull` it, and set OLLAMA_MODEL "
+                "in your .env to that model name, then restart the program."
+            )
+        raise
+
+
+def generate_chatroom_reply(
+    character_keys: list[str],
+    query: str,
+    chunks: list[str],
+    metas: list[dict],
+    history: list[tuple[str, str]],
+    *,
+    include_user_in_room: bool = True,
+) -> str:
+    """Generate a multi-character chatroom dialogue for 2+ personas.
+
+    Unlike `generate_scene_reply`, this supports larger casts (e.g. 6 characters).
+    """
+    if not character_keys:
+        raise ValueError("At least one character key is required for a chatroom.")
+
+    cfgs = [CHARACTERS[key] for key in character_keys]
+    names = [cfg["name"] for cfg in cfgs]
+    context = _build_context(chunks, metas)
+    history_text = _format_scene_history(character_keys, history)
+
+    roster_lines: list[str] = []
+    for cfg in cfgs:
+        name = cfg["name"]
+        profile = cfg["profile"]
+        verbosity = cfg.get("verbosity", "normal")
+        politeness = cfg.get("politeness", "polite")
+        deductive_depth = cfg.get("deductive_depth", "normal")
+        roster_lines.append(
+            f"{name}:\n"
+            f"- Profile: {profile}\n"
+            f"- Verbosity: {verbosity}\n"
+            f"- Politeness: {politeness}\n"
+            f"- Deductive depth: {deductive_depth}\n"
+        )
+    roster = "\n".join(roster_lines)
+
+    names_str = ", ".join(names)
+    user_rule = (
+        "- The user is present in the room as an unseen participant; characters may address the user as 'you'.\n"
+        "- Do NOT write dialogue lines for the user. Only write lines spoken by the listed characters.\n"
+        if include_user_in_room
+        else ""
+    )
+
+    prompt = f"""You are writing an in-universe conversation in a single room between several Sherlock Holmes characters.
+
+Cast of characters:
+{roster}
+
+Chatroom rules:
+- Keep every character strictly in-character, matching the tone, knowledge, and manner of speech described above.
+- The conversation is set in late 19th / early 20th century London, unless the user clearly specifies otherwise.
+- Ground the chat in the canon passages below wherever possible, but do not mention 'passages', 'documents', or 'sources'.
+- Do not mention that you are an AI or a language model.
+- Tag every spoken line with the speaker's name, e.g. "Sherlock Holmes:" or "Dr. John Watson:".
+- Keep the scene lively and interactive: characters should respond to each other, disagree, question, and build on deductions.
+{user_rule}
+
+Conversation so far:
+{history_text}
+
+Canon passages:
+{context}
+
+User instruction for the next turn:
+{query}
+
+Now write the next concise chunk of dialogue between {names_str}, following the rules above. Respond only with speaker-tagged dialogue (and any minimal stage directions)."""
+
+    try:
+        response = OLLAMA_CLIENT.chat(model=OLLAMA_MODEL, messages=[{"role": "user", "content": prompt}])
+        reply = response["message"]["content"].strip()
+        return reply
+    except Exception as e:
+        err = str(e).lower()
+        if "connection" in err or "refused" in err or "connect" in err:
+            return "Ollama is not running. Install from ollama.com, then run: ollama run llama3.2"
+        if "requires more system memory" in err or "more system memory" in err:
+            return (
+                "The configured Ollama model requires more system memory than is available.\n"
+                "Choose a smaller model (e.g. a 1B/2B variant), `ollama pull` it, and set OLLAMA_MODEL "
+                "in your .env to that model name, then restart the program."
+            )
+        raise
+
+
+def generate_case_story_reply(
+    character_keys: list[str],
+    case_prompt: str,
+    chunks: list[str],
+    metas: list[dict],
+    history: list[tuple[str, str]],
+) -> str:
+    """Generate a story episode for a chosen case prompt featuring the given cast."""
+    if not character_keys:
+        raise ValueError("At least one character key is required for a case story.")
+
+    cfgs = [CHARACTERS[key] for key in character_keys]
+    names = [cfg["name"] for cfg in cfgs]
+    context = _build_context(chunks, metas)
+    history_text = _format_story_history(history)
+
+    roster_lines: list[str] = []
+    for cfg in cfgs:
+        name = cfg["name"]
+        profile = cfg["profile"]
+        roster_lines.append(f"{name}: {profile}")
+    roster = "\n".join(roster_lines)
+
+    names_str = ", ".join(names)
+    prompt = f"""You are writing a short Sherlock Holmes pastiche story that features a fixed cast of characters.
+
+Cast (must all appear meaningfully in this episode):
+{roster}
+
+Story rules:
+- Set the story in late 19th / early 20th century London (or plausible nearby locales) unless the user requests otherwise.
+- Keep the characters consistent with their profiles. Maintain distinct voices in dialogue.
+- You may write both narrative prose and dialogue. When writing dialogue, tag lines like "Sherlock Holmes:".
+- Ground details in the canon passages below wherever possible, but do not mention 'passages', 'documents', or 'sources'.
+- Do not mention that you are an AI or a language model.
+- Ensure the story has a clear beginning, investigation/escalation, and a satisfying reveal or twist.
+
+Prior episodes (for continuity):
+{history_text}
+
+Canon passages:
+{context}
+
+Case prompt from the user:
+{case_prompt}
+
+Now write the next concise story episode (aim for ~700-1200 words) featuring {names_str}. Respond only with the story."""
 
     try:
         response = OLLAMA_CLIENT.chat(model=OLLAMA_MODEL, messages=[{"role": "user", "content": prompt}])
