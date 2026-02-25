@@ -6,6 +6,50 @@
   padding: 32px 16px;
 }
 
+/* Chat layout: fixed viewport, only messages scroll (WhatsApp-style) */
+.archive-shell:has(.archive-inner--chat) {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  padding: 16px;
+  align-items: stretch;
+}
+
+.archive-shell:has(.archive-inner--chat) .archive-inner {
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+}
+
+.archive-inner--chat {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  grid-template-rows: 1fr;
+  gap: 20px;
+  align-items: stretch;
+  min-height: 0;
+  flex: 1;
+}
+
+.archive-inner--chat .sidebar-card {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.archive-inner--chat .chat-shell {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.archive-inner--chat .chat-header {
+  flex-shrink: 0;
+}
+
+.archive-inner--chat .chat-input-row {
+  flex-shrink: 0;
+}
+
 .archive-inner {
   position: relative;
   width: 100%;
@@ -675,12 +719,6 @@
 }
 
 /* Chat layout */
-
-.archive-inner--chat {
-  display: grid;
-  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
-  gap: 20px;
-}
 
 .sidebar-card {
   position: relative;
