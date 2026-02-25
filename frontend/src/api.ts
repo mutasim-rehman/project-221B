@@ -18,6 +18,14 @@ export interface ChatroomResponse {
   setting: string
 }
 
+export interface CharacterChatResponse {
+  reply: string
+  character: string
+  sources: string[]
+  mode: string
+  strictness: string
+}
+
 function getSessionId(): string {
   let sid = sessionStorage.getItem('221b_session_id')
   if (!sid) {
@@ -66,6 +74,47 @@ export async function fetchChatroomTurn(question: string, strictness = 'balanced
   } catch {
     return mockChatroomTurn(question)
   }
+}
+
+export async function fetchCharacterReply(
+  characterKey: string,
+  question: string,
+  strictness = 'strict'
+): Promise<string> {
+  try {
+    const sessionId = getSessionId()
+    const data = await post<CharacterChatResponse>('/api/character-chat', {
+      character_key: characterKey,
+      question,
+      session_id: sessionId,
+      strictness,
+    })
+    return data.reply
+  } catch {
+    return mockCharacterReplyText(characterKey, question)
+  }
+}
+
+function mockCharacterReplyText(characterKey: string, question: string): string {
+  const lowered = question.trim().toLowerCase()
+  const prompts: Record<string, string> = {
+    sherlock:
+      'From the fragments you provide, certain general conclusions may already be drawn. Yet I advise you to add every small, seemingly irrelevant detail; it is upon such trifles that cases have so often turned.',
+    watson:
+      'Your account has the ring of genuine experience. I should like to know a little more of the circumstances and of the persons involved, if you would not find it too great a strain to relate them.',
+    moriarty:
+      "You stand, perhaps without knowing it, at the edge of a very intricate web. Before you proceed, be certain you understand what you are prepared to pay for a resolution.",
+    irene:
+      'There is more to this than you have yet chosen to say. Consider carefully what you wish to reveal, and then tell me the part that matters most to you.',
+    mycroft:
+      'The picture is incomplete. Supply the missing elements, and I will determine whether the matter warrants further attention.',
+    lestrade:
+      "I need names, dates, and what you saw. Nothing else will do. When you have them, come back.",
+  }
+  if (!lowered) {
+    return 'A blank page rarely conceals a trivial matter. When you are ready, give me the bare facts as you know them.'
+  }
+  return prompts[characterKey] ?? prompts.lestrade
 }
 
 function mockChatroomTurn(_question: string): ChatroomResponse {
