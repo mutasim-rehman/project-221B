@@ -1,6 +1,6 @@
 .env
-# chroma_db/ — uncomment to ignore; keep tracked for Replit deploy (skip index build)
 .idea/
+huggingface/
 __pycache__/
 *.pyc
 .venv/

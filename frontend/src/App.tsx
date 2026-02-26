@@ -680,8 +680,7 @@ function App() {
           </div>
           {!isApiConfigured && (
             <div className="sidebar-note">
-              API not connected. Replies use local mocks. Set VITE_API_BASE to connect to the RAG
-              backend.
+              API not connected. Replies use local mocks. Set VITE_GRADIO_SPACE (e.g. mutasim-rehman/appledoor) or VITE_API_BASE to connect.
             </div>
           )}
         </aside>

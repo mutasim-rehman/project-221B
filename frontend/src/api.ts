@@ -1,17 +1,42 @@
-/** API client for 221B backend. Uses VITE_API_BASE when set; falls back to mock when unreachable. */
+/** API client for 221B backend. Uses Gradio Space or VITE_API_BASE when set; falls back to mock when unreachable. */
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string) || ''
+const GRADIO_SPACE = (import.meta.env.VITE_GRADIO_SPACE as string) || ''
+const HF_TOKEN = (import.meta.env.VITE_HF_TOKEN as string) || ''
 
-/** True when VITE_API_BASE is set (API expected to be available). */
-export const isApiConfigured = Boolean(API_BASE)
+/** True when API is configured (Gradio Space or custom backend). */
+export const isApiConfigured = Boolean(API_BASE || GRADIO_SPACE)
+
+let _gradioClient: Awaited<ReturnType<typeof import('@gradio/client').Client.connect>> | null = null
+
+async function getGradioClient() {
+  if (!GRADIO_SPACE) throw new Error('VITE_GRADIO_SPACE not configured')
+  if (_gradioClient) return _gradioClient
+  const { Client } = await import('@gradio/client')
+  _gradioClient = await Client.connect(GRADIO_SPACE, {
+    token: (HF_TOKEN?.startsWith('hf_') ? HF_TOKEN : undefined) as `hf_${string}` | undefined,
+  })
+  return _gradioClient
+}
+
+function extractText(data: unknown): string {
+  if (typeof data === 'string') return data
+  if (Array.isArray(data) && data.length > 0) return extractText(data[0])
+  if (data && typeof data === 'object') {
+    const obj = data as Record<string, unknown>
+    return (obj.reply ?? obj.response ?? obj.content ?? obj.scene ?? obj.data ?? '').toString()
+  }
+  return String(data ?? '')
+}
 
 /**
  * Call health endpoint when the app loads. Keeps connection warm and allows
  * the backend's background warmup to complete before the user's first message.
+ * For Gradio Space, connects the client to warm the connection.
  */
 export function warmupConnection(): void {
-  if (!API_BASE) return
-  fetch(`${API_BASE}/health`, { method: 'GET' }).catch(() => {})
+  if (API_BASE) fetch(`${API_BASE}/health`, { method: 'GET' }).catch(() => {})
+  if (GRADIO_SPACE) getGradioClient().catch(() => {})
 }
 
 export interface CaseStoryResponse {
@@ -61,6 +86,22 @@ async function post<T>(path: string, body: Record<string, string>): Promise<T> {
 }
 
 export async function fetchCaseStory(casePrompt: string, strictness = 'creative'): Promise<CaseStoryResponse> {
+  if (GRADIO_SPACE) {
+    try {
+      const client = await getGradioClient()
+      const result = await client.predict('/gen_case_story', { prompt: casePrompt })
+      const story = extractText(result.data)
+      return {
+        story,
+        characters: ['Sherlock Holmes', 'Dr. John Watson', 'Professor Moriarty', 'Irene Adler', 'Inspector Lestrade', 'Mycroft Holmes'],
+        sources: [],
+        mode: 'six_case_story',
+        setting: 'case_story',
+      }
+    } catch {
+      return mockCaseStory(casePrompt)
+    }
+  }
   try {
     const sessionId = getSessionId()
     const data = await post<CaseStoryResponse>('/api/six-case-story', {
@@ -75,6 +116,22 @@ export async function fetchCaseStory(casePrompt: string, strictness = 'creative'
 }
 
 export async function fetchChatroomTurn(question: string, strictness = 'balanced'): Promise<ChatroomResponse> {
+  if (GRADIO_SPACE) {
+    try {
+      const client = await getGradioClient()
+      const result = await client.predict('/chat_1', { message: question })
+      const scene = extractText(result.data)
+      return {
+        scene,
+        characters: ['Sherlock Holmes', 'Dr. John Watson', 'Professor Moriarty', 'Irene Adler', 'Inspector Lestrade', 'Mycroft Holmes'],
+        sources: [],
+        mode: 'six_chatroom',
+        setting: 'room_conversation',
+      }
+    } catch {
+      return mockChatroomTurn(question)
+    }
+  }
   try {
     const sessionId = getSessionId()
     const data = await post<ChatroomResponse>('/api/six-chatroom', {
@@ -93,6 +150,18 @@ export async function fetchCharacterReply(
   question: string,
   strictness = 'strict'
 ): Promise<string> {
+  if (GRADIO_SPACE) {
+    try {
+      const client = await getGradioClient()
+      const result = await client.predict('/chat', {
+        message: question,
+        param_2: characterKey,
+      })
+      return extractText(result.data)
+    } catch {
+      return mockCharacterReplyText(characterKey, question)
+    }
+  }
   try {
     const sessionId = getSessionId()
     const data = await post<CharacterChatResponse>('/api/character-chat', {

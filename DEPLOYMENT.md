@@ -2,16 +2,22 @@
 
 ## Architecture
 
+**Option A — Hugging Face Space (Gradio, standalone):**
 ```
-┌─────────────────┐         API          ┌─────────────────────┐
-│   Frontend      │ ◄──────────────────► │   Backend/Chatbot   │
-│   (Vercel)      │   JSON over HTTP     │   (Replit)          │
-└─────────────────┘                      └─────────────────────┘
+┌─────────────────────────────────────┐
+│   Gradio app (HF Space "appledoor") │
+│   Character chat, Case story,       │
+│   Six-character chatroom            │
+└─────────────────────────────────────┘
 ```
 
-- **Backend**: FastAPI server exposing `/api/six-case-story` and `/api/six-chatroom`
-- **Frontend**: React/Vite app; uses `VITE_API_BASE` to target the backend
-- **Communication**: REST API (POST JSON, receive JSON)
+**Option B — React frontend + FastAPI backend:**
+```
+┌─────────────────┐         API          ┌─────────────────────┐
+│   Frontend      │ ◄──────────────────► │   Backend           │
+│   (Vercel)      │   JSON over HTTP     │   (Railway, etc.)   │
+└─────────────────┘                      └─────────────────────┘
+```
 
 ---
 
@@ -70,53 +76,41 @@ If `VITE_API_BASE` is unset or wrong, the frontend falls back to mock data.
 
 ## Phase 2: Deployment
 
-### Backend on Replit
+### Backend on Hugging Face Spaces (Gradio)
 
-The project includes a `.replit` file that uses **CPU-only PyTorch** to avoid deployment timeout during the bundle phase. Without this, the default CUDA-enabled PyTorch adds ~2GB and causes the deployment to time out.
+The `huggingface/appledoor/` directory contains a complete Hugging Face Space. Push it to your Space:
 
-1. Create a Replit project and add your code (or import from GitHub)
-2. The `.replit` file configures the deploy build and run commands automatically
-3. Set Replit secrets / env vars:
-   - `OLLAMA_MODEL`, `OLLAMA_TIMEOUT_SECONDS` if needed
-   - `CORS_ORIGINS` — add your Vercel URL, e.g. `https://your-app.vercel.app`
-3. Ensure ChromaDB index is built (e.g. in a setup script or one-time run)
-4. Run: `python -m src.api.main` or `uvicorn src.api.main:app --host 0.0.0.0 --port 8000`
-5. Note the Replit URL (e.g. `https://your-app-name.replit.app`)
+1. The Space is in `huggingface/appledoor/` (cloned from your HF Space)
+2. Add **HF_TOKEN** to Space secrets (Settings → Repository secrets) for the Inference API
+3. Push to the Space: `cd huggingface/appledoor && git add . && git commit -m "..." && git push`
+4. HF will build and run the Gradio app. The index is built automatically on first run (or pre-build locally and commit `chroma_db/`)
 
-**If deployment still times out:** The build now skips the index step when `chroma_db/` is already in the repo. To use this:
+### Frontend + Gradio Space (Option A — recommended)
 
-1. Build locally: `python -m src.index`
-2. Commit `chroma_db/` (it is no longer in `.gitignore`)
-3. Push and redeploy — the build will skip indexing and stay much smaller
+Connect the React frontend to your deployed HF Gradio Space:
 
-### Frontend on Vercel
+1. Deploy the `frontend/` folder to Vercel (or any static host)
+2. Add environment variable: `VITE_GRADIO_SPACE` = `mutasim-rehman/appledoor` (your Space path)
+3. For private Spaces, add `VITE_HF_TOKEN` = your HF token
+4. Redeploy so the frontend is built with the correct config
+
+The frontend uses `@gradio/client` to call your Space's API endpoints: `/chat`, `/gen_case_story`, `/chat_1`.
+
+### Frontend on Vercel (Option B — FastAPI backend)
 
 1. Deploy the `frontend/` folder to Vercel
-2. Add environment variable for the build:
-   - `VITE_API_BASE` = your Replit backend URL (e.g. `https://your-app-name.replit.app`)
+2. Add environment variable: `VITE_API_BASE` = your backend URL
 3. Redeploy so the frontend is built with the correct API base
-
-### CORS for production
-
-The backend allows `localhost:5173` and `localhost:3000` by default. For production, set:
-
-```bash
-CORS_ORIGINS=https://your-vercel-app.vercel.app
-```
-
-Or multiple origins, comma-separated:
-
-```bash
-CORS_ORIGINS=https://app.example.com,https://staging.example.com
-```
 
 ---
 
 ## Environment variables
 
-| Variable       | Where      | Purpose                                              |
-|----------------|------------|------------------------------------------------------|
-| `VITE_API_BASE`| Frontend   | Backend base URL (no trailing slash)                 |
-| `CORS_ORIGINS` | Backend    | Comma-separated allowed origins for cross-origin     |
-| `APP_PORT`     | Backend    | Port for the API server (default: 8000)              |
-| `OLLAMA_MODEL` | Backend    | Ollama model name                                    |
+| Variable            | Where      | Purpose                                              |
+|---------------------|------------|------------------------------------------------------|
+| `VITE_GRADIO_SPACE` | Frontend   | HF Space path (e.g. `user/space-name`) for Gradio API |
+| `VITE_HF_TOKEN`     | Frontend   | HF token for private Spaces (optional)               |
+| `VITE_API_BASE`     | Frontend   | Backend base URL when using FastAPI (no trailing slash) |
+| `CORS_ORIGINS`      | Backend    | Comma-separated allowed origins for cross-origin     |
+| `APP_PORT`          | Backend    | Port for the API server (default: 8000)              |
+| `OLLAMA_MODEL`      | Backend    | Ollama model name                                    |
