@@ -1,0 +1,8 @@
+# 221B Baker Street — Replit configuration
+entrypoint = "src/api/main.py"
+
+[deployment]
+# Use CPU-only PyTorch first to avoid huge CUDA bundle (~2GB savings)
+# Then install rest of deps, then build ChromaDB index
+build = "pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install -r requirements.txt && python -m src.index"
+run = "python -m src.api.main"

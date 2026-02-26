@@ -7,3 +7,4 @@ __pycache__/
 venv/
 node_modules/
 docs/OPTIMIZATION_RECOMMENDATIONS.md
+DEPLOYMENT.md
