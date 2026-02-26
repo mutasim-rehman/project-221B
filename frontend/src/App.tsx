@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react'
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { fetchCaseStory, fetchCharacterReply, fetchChatroomTurn, isApiConfigured, warmupConnection } from './api'
 
@@ -206,6 +206,14 @@ function App() {
   const [caseStory, setCaseStory] = useState<string | null>(null)
   const [chatroomScenes, setChatroomScenes] = useState<{ id: string; userText: string; scene: string; createdAt: string }[]>([])
 
+  const chatJournalRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    const el = chatJournalRef.current
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+  }, [messages, chatroomScenes])
+
   const activeCharacter = useMemo(
     () => CHARACTERS.find((c) => c.key === activeKey) ?? null,
     [activeKey],
@@ -287,10 +295,10 @@ function App() {
                 type="button"
                 className="sidebar-back"
                 onClick={handleReturnToArchive}
-                aria-label="Return to the main archives"
+                aria-label="Exit and return to the main archives"
               >
                 <span>←</span>
-                <span>Back to archives</span>
+                <span>Exit</span>
               </button>
             </div>
             <div className="sidebar-meta">
@@ -373,10 +381,10 @@ function App() {
                 type="button"
                 className="sidebar-back"
                 onClick={handleReturnToArchive}
-                aria-label="Return to the main archives"
+                aria-label="Exit and return to the main archives"
               >
                 <span>←</span>
-                <span>Back to archives</span>
+                <span>Exit</span>
               </button>
             </div>
             <div className="sidebar-meta">
@@ -394,7 +402,7 @@ function App() {
                 </div>
               </div>
             </header>
-            <section className="chat-journal">
+            <section ref={chatJournalRef} className="chat-journal">
               {chatroomScenes.length === 0 && (
                 <article className="journal-entry journal-entry--character">
                   <header className="journal-header">
@@ -667,10 +675,10 @@ function App() {
               type="button"
               className="sidebar-back"
               onClick={handleReturnToArchive}
-              aria-label="Return to the main archives"
+              aria-label="Exit and return to the main archives"
             >
               <span>←</span>
-              <span>Back to archives</span>
+              <span>Exit</span>
             </button>
           </div>
           <div className="sidebar-meta">
@@ -703,7 +711,7 @@ function App() {
             </div>
           </header>
 
-          <section className="chat-journal" aria-label="Conversation log">
+          <section ref={chatJournalRef} className="chat-journal" aria-label="Conversation log">
             {messages.map((message) => (
               <JournalEntry
                 key={message.id}
