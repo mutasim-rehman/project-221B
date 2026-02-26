@@ -729,7 +729,7 @@ function App() {
                 placeholder="Describe your difficulty as you would in a letter to Baker Street…"
                 aria-label="Case entry"
               />
-              <div className="chat-hint">
+              <div className="chat-hint" data-hide-on-mobile>
                 You may begin plainly: who you are, what has occurred, and what puzzles you most.
               </div>
             </div>
@@ -738,11 +738,16 @@ function App() {
                 className="chat-submit"
                 type="submit"
                 disabled={!draft.trim() || isAwaitingReply}
+                aria-label={isAwaitingReply ? 'Awaiting reply' : 'Dispatch entry'}
               >
-                <span>✉</span>
-                <span>Dispatch entry</span>
+                <span className="chat-submit__icon chat-submit__icon--desktop" aria-hidden>✉</span>
+                <span className="chat-submit__icon chat-submit__icon--mobile" aria-hidden>→</span>
+                <span className="chat-submit__label">Dispatch entry</span>
               </button>
-              <div className="chat-status">
+              <div
+                className="chat-status"
+                data-hide-on-mobile={!isAwaitingReply ? '' : undefined}
+              >
                 {isAwaitingReply
                   ? `Awaiting ${activeCharacter.name.split(' ')[0]}’s written reply…`
                   : isApiConfigured
