@@ -5,6 +5,15 @@ const API_BASE = (import.meta.env.VITE_API_BASE as string) || ''
 /** True when VITE_API_BASE is set (API expected to be available). */
 export const isApiConfigured = Boolean(API_BASE)
 
+/**
+ * Call health endpoint when the app loads. Keeps connection warm and allows
+ * the backend's background warmup to complete before the user's first message.
+ */
+export function warmupConnection(): void {
+  if (!API_BASE) return
+  fetch(`${API_BASE}/health`, { method: 'GET' }).catch(() => {})
+}
+
 export interface CaseStoryResponse {
   story: string
   characters: string[]

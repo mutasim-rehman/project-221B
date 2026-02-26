@@ -71,9 +71,39 @@ class CharacterChatResponse(BaseModel):
     strictness: str
 
 
+# --- Warmup ---
+def _warmup_blocking() -> None:
+    """Load models at startup so the first user request doesn't pay cold-start (5–25 sec)."""
+    try:
+        from src.cache import get_embedding
+        get_embedding("warmup")
+        logger.info("Warmup: embedding model loaded")
+    except Exception as e:
+        logger.warning("Warmup: embedding load failed: %s", e)
+    try:
+        import chromadb
+        from src.config import CHROMA_DIR, COLLECTION_NAME
+        client = chromadb.PersistentClient(path=str(CHROMA_DIR))
+        client.get_collection(name=COLLECTION_NAME)
+        logger.info("Warmup: ChromaDB ready")
+    except Exception as e:
+        logger.warning("Warmup: ChromaDB not ready: %s", e)
+    try:
+        from ollama import Client
+        from src.config import OLLAMA_MODEL, OLLAMA_TIMEOUT_SECONDS
+        ollama = Client(timeout=min(10, OLLAMA_TIMEOUT_SECONDS))
+        ollama.chat(model=OLLAMA_MODEL, messages=[{"role": "user", "content": "."}])
+        logger.info("Warmup: Ollama model loaded")
+    except Exception as e:
+        logger.warning("Warmup: Ollama not ready (first request may be slow): %s", e)
+
+
 # --- App ---
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    # Run warmup in a thread so the server starts quickly; models load in background.
+    import asyncio
+    asyncio.create_task(asyncio.to_thread(_warmup_blocking))
     yield
 
 

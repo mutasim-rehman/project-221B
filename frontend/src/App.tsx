@@ -1,6 +1,6 @@
-import { type FormEvent, useMemo, useState } from 'react'
+import { type FormEvent, useEffect, useMemo, useState } from 'react'
 import './App.css'
-import { fetchCaseStory, fetchCharacterReply, fetchChatroomTurn, isApiConfigured } from './api'
+import { fetchCaseStory, fetchCharacterReply, fetchChatroomTurn, isApiConfigured, warmupConnection } from './api'
 
 import sherlockImg from '../resources/sherlock.png'
 import watsonImg from '../resources/watson.png'
@@ -194,6 +194,10 @@ const SIX_CHARACTER_NAMES =
   'Sherlock Holmes, Dr. John Watson, Professor Moriarty, Irene Adler, Inspector Lestrade, and Mycroft Holmes'
 
 function App() {
+  useEffect(() => {
+    warmupConnection()
+  }, [])
+
   const [activeKey, setActiveKey] = useState<CharacterKey | null>(null)
   const [activeSixMode, setActiveSixMode] = useState<SixMode | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
