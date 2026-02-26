@@ -1059,16 +1059,20 @@
   }
 }
 
-/* Responsive tweaks */
+/* Responsive: tablets and below */
 
 @media (max-width: 960px) {
   .archive-shell {
     padding: 20px 12px;
   }
 
+  .archive-shell:has(.archive-inner--chat) {
+    padding: 12px 8px;
+  }
+
   .archive-inner {
     padding: 20px 18px 18px;
-    border-radius: 20px;
+    border-radius: 12px;
   }
 
   .archive-hero {
@@ -1087,31 +1091,233 @@
 
   .archive-inner--chat {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
   }
 
-  .sidebar-card {
+  .archive-inner--chat .sidebar-card {
     order: -1;
+    flex-shrink: 0;
+  }
+
+  .archive-inner--chat .chat-shell {
+    min-height: 200px;
   }
 }
+
+/* Responsive: phones */
 
 @media (max-width: 640px) {
   .archive-shell {
     padding: 12px 8px;
   }
 
+  .archive-shell:has(.archive-inner--chat) {
+    padding: 8px 6px;
+  }
+
   .archive-inner {
     padding: 16px 14px 14px;
   }
 
+  .archive-hero {
+    padding: 14px 16px;
+    margin: 0 -14px 18px -14px;
+  }
+
   .archive-title {
-    font-size: 2rem;
+    font-size: 1.75rem;
+  }
+
+  .archive-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .hero-plaque {
+    width: 100%;
+    max-width: 200px;
   }
 
   .character-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .character-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 12px;
+  }
+
+  .portrait-frame {
+    width: 52px;
+    height: 66px;
+  }
+
+  .section-heading {
+    font-size: 1.05rem;
+  }
+
+  .archive-layout {
+    gap: 16px;
+  }
+
+  /* Chat layout on phones */
+  .archive-inner--chat {
+    gap: 12px;
+  }
+
+  .sidebar-card {
+    padding: 12px 10px 10px;
+  }
+
+  .sidebar-portrait {
+    max-height: 100px;
+  }
+
+  .sidebar-header {
+    flex-wrap: wrap;
+  }
+
+  .sidebar-back {
+    min-height: 44px;
+  }
+
+  .sidebar-character-name {
+    font-size: 0.9rem;
+  }
+
+  .chat-shell {
+    padding: 10px 12px 10px;
+  }
+
+  .chat-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .chat-header-meta {
+    text-align: left;
+    font-size: 0.72rem;
+  }
+
+  .chat-heading {
+    font-size: 0.95rem;
+  }
+
+  .chat-subtitle {
+    font-size: 0.76rem;
+  }
+
+  .chat-input-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
   .chat-submit {
     min-width: 0;
+    padding: 12px 16px;
+    min-height: 44px;
+  }
+
+  .chat-journal {
+    padding: 8px;
+    margin: 4px 0 8px;
+  }
+
+  .journal-entry {
+    padding: 8px 10px;
+  }
+
+  .journal-body {
+    font-size: 0.88rem;
+  }
+
+  .six-mode-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 10px;
+  }
+
+  .six-mode-icon {
+    width: 52px;
+    height: 52px;
+  }
+}
+
+/* Responsive: small phones */
+
+@media (max-width: 390px) {
+  .archive-shell {
+    padding: 8px 6px;
+  }
+
+  .archive-shell:has(.archive-inner--chat) {
+    padding: 6px 4px;
+  }
+
+  .archive-inner {
+    padding: 12px 10px 10px;
+  }
+
+  .archive-title {
+    font-size: 1.5rem;
+  }
+
+  .archive-kicker {
+    font-size: 0.7rem;
+  }
+
+  .sidebar-back {
+    padding: 8px 14px;
+    min-height: 44px;
+  }
+
+  .character-card {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .portrait-frame {
+    margin: 0 auto;
+  }
+
+  .character-footer {
+    justify-content: center;
+  }
+
+  .six-mode-card {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .six-mode-icon {
+    margin: 0 auto;
+  }
+
+  .six-mode-btn {
+    align-self: center;
+  }
+
+  .chat-submit span:last-child {
+    font-size: 0.85rem;
+  }
+}
+
+/* Touch-friendly scroll and safe areas */
+
+@media (max-width: 640px) {
+  .chat-journal {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  .archive-shell:has(.archive-inner--chat) {
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  .chat-input-row {
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
   }
 }
