@@ -1,5 +1,6 @@
 .env
 .idea/
+.replit
 huggingface/
 __pycache__/
 *.pyc
@@ -7,4 +8,3 @@ __pycache__/
 venv/
 node_modules/
 docs/OPTIMIZATION_RECOMMENDATIONS.md
-DEPLOYMENT.md
