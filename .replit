@@ -2,7 +2,8 @@
 entrypoint = "src/api/main.py"
 
 [deployment]
-# Use CPU-only PyTorch first to avoid huge CUDA bundle (~2GB savings)
-# Then install rest of deps, then build ChromaDB index
-build = "pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install -r requirements.txt && python -m src.index"
+# 1. Force CPU-only PyTorch (Replit has CUDA torch pre-installed - must uninstall first)
+# 2. Install deps
+# 3. Build ChromaDB index only if chroma_db/ doesn't exist (commit chroma_db to skip this)
+build = "pip uninstall torch -y 2>/dev/null; pip install torch --index-url https://download.pytorch.org/whl/cpu && pip install -r requirements.txt && (test -d chroma_db && test -f chroma_db/chroma.sqlite3) || python -m src.index"
 run = "python -m src.api.main"
