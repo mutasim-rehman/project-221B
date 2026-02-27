@@ -16,7 +16,7 @@ type CharacterKey = 'sherlock' | 'watson' | 'moriarty' | 'irene' | 'mycroft' | '
 
 type SixMode = 'case_story' | 'chatroom'
 
-type MobileArchiveChoice = null | 'character' | 'six'
+type MobileArchiveChoice = null | 'character' | 'six' | 'canon'
 
 type Speaker = 'user' | 'character'
 
@@ -211,6 +211,16 @@ function JournalEntry({ message, character }: JournalEntryProps) {
 const SIX_CHARACTER_NAMES =
   'Sherlock Holmes, Dr. John Watson, Professor Moriarty, Irene Adler, Inspector Lestrade, and Mycroft Holmes'
 
+/** Placeholder config for canon mode replies (RAG Q&A over canon index). */
+const CANON_PLACEHOLDER: CharacterConfig = {
+  key: 'sherlock',
+  name: 'The Canon Index',
+  title: 'RAG-powered Q&A',
+  summary: 'Questions answered from the Sherlock Holmes canon.',
+  tone: 'Factual, grounded in text.',
+  signature: '—',
+}
+
 function App() {
   useEffect(() => {
     warmupConnection()
@@ -220,6 +230,7 @@ function App() {
   const [mobileArchiveChoice, setMobileArchiveChoice] = useState<MobileArchiveChoice>(null)
   const [activeKey, setActiveKey] = useState<CharacterKey | null>(null)
   const [activeSixMode, setActiveSixMode] = useState<SixMode | null>(null)
+  const [activeCanonMode, setActiveCanonMode] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [draft, setDraft] = useState('')
   const [isAwaitingReply, setIsAwaitingReply] = useState(false)
@@ -242,6 +253,7 @@ function App() {
   const handleSelectCharacter = (character: CharacterConfig) => {
     setActiveKey(character.key)
     setActiveSixMode(null)
+    setActiveCanonMode(false)
     setMessages(buildInitialWelcome(character))
     setDraft('')
     setIsAwaitingReply(false)
@@ -252,6 +264,18 @@ function App() {
   const handleSelectSixMode = (mode: SixMode) => {
     setActiveSixMode(mode)
     setActiveKey(null)
+    setActiveCanonMode(false)
+    setMessages([])
+    setDraft('')
+    setIsAwaitingReply(false)
+    setCaseStory(null)
+    setChatroomScenes([])
+  }
+
+  const handleSelectCanonMode = () => {
+    setActiveCanonMode(true)
+    setActiveKey(null)
+    setActiveSixMode(null)
     setMessages([])
     setDraft('')
     setIsAwaitingReply(false)
@@ -263,6 +287,7 @@ function App() {
     setMobileArchiveChoice(null)
     setActiveKey(null)
     setActiveSixMode(null)
+    setActiveCanonMode(false)
     setMessages([])
     setDraft('')
     setIsAwaitingReply(false)
@@ -300,6 +325,128 @@ function App() {
     } finally {
       setIsAwaitingReply(false)
     }
+  }
+
+  const handleCanonSubmit = (event: FormEvent) => {
+    event.preventDefault()
+    const trimmed = draft.trim()
+    if (!trimmed || isAwaitingReply) return
+
+    const now = new Date()
+    const userMessage: Message = {
+      id: makeId(),
+      speaker: 'user',
+      text: trimmed,
+      createdAt: formatTimestamp(now),
+    }
+    setMessages((prev) => [...prev, userMessage])
+    setDraft('')
+
+    const deploymentReply: Message = {
+      id: makeId(),
+      speaker: 'character',
+      text: 'This feature is under deployment.',
+      createdAt: formatTimestamp(new Date()),
+    }
+    setMessages((prev) => [...prev, deploymentReply])
+  }
+
+  if (activeCanonMode) {
+    return (
+      <div className="archive-shell">
+        <div className="archive-inner archive-inner--chat">
+          <aside className="sidebar-card" aria-label="Interactive canon mode">
+            <div className="sidebar-header">
+              <div className="sidebar-title">
+                <div className="sidebar-label">Interactive canon</div>
+                <div className="sidebar-character-name">RAG Q&A over the canon</div>
+              </div>
+              <button
+                type="button"
+                className="sidebar-back"
+                onClick={handleReturnToArchive}
+                aria-label="Exit and return to the main archives"
+              >
+                <span>←</span>
+                <span>Exit</span>
+              </button>
+            </div>
+            <div className="sidebar-meta">
+              <strong>Ask the canon directly</strong>
+              <br />
+              Pose questions about the Sherlock Holmes stories. The system retrieves relevant passages and answers from the indexed canon.
+            </div>
+            <div className="sidebar-note">
+              This feature is under deployment.
+            </div>
+          </aside>
+          <main className="chat-shell" aria-label="Interactive canon conversation">
+            <header className="chat-header">
+              <div>
+                <div className="chat-heading">
+                  Interactive canon — <span>RAG Q&A</span>
+                </div>
+                <div className="chat-subtitle">
+                  Ask questions about the Sherlock Holmes canon. Answers are grounded in retrieved passages.
+                </div>
+              </div>
+              <div className="chat-header-meta">
+                Session mode: <strong>Canon Q&A</strong>
+              </div>
+            </header>
+
+            <section ref={chatJournalRef} className="chat-journal" aria-label="Conversation log">
+              {messages.length === 0 && (
+                <article className="journal-entry journal-entry--character">
+                  <header className="journal-header">
+                    <div className="journal-label"><strong>Welcome</strong> — The Canon Index</div>
+                  </header>
+                  <div className="journal-body">
+                    Ask a question about the Sherlock Holmes stories. The system will retrieve relevant passages and provide an answer grounded in the canon.
+                  </div>
+                </article>
+              )}
+              {messages.map((message) => (
+                <JournalEntry
+                  key={message.id}
+                  message={message}
+                  character={CANON_PLACEHOLDER}
+                />
+              ))}
+            </section>
+
+            <form className="chat-input-row" onSubmit={handleCanonSubmit}>
+              <div className="chat-input">
+                <textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder="e.g. Who is Mycroft? What happened in the Hound of the Baskervilles?"
+                  aria-label="Question for the canon"
+                />
+                <div className="chat-hint" data-hide-on-mobile>
+                  Questions about characters, plots, and details from the stories.
+                </div>
+              </div>
+              <div>
+                <button
+                  className="chat-submit"
+                  type="submit"
+                  disabled={!draft.trim()}
+                  aria-label="Send question"
+                >
+                  <span className="chat-submit__icon chat-submit__icon--desktop" aria-hidden>✉</span>
+                  <span className="chat-submit__icon chat-submit__icon--mobile" aria-hidden>→</span>
+                  <span className="chat-submit__label">Send question</span>
+                </button>
+                <div className="chat-status" data-hide-on-mobile>
+                  This feature is under deployment.
+                </div>
+              </div>
+            </form>
+          </main>
+        </div>
+      </div>
+    )
   }
 
   if (activeSixMode === 'case_story') {
@@ -588,6 +735,25 @@ function App() {
                         <span className="mobile-chooser-btn">View options</span>
                       </div>
                     </button>
+                    <button
+                      type="button"
+                      className="mobile-chooser-card"
+                      onClick={() => {
+                        setMobileArchiveChoice('canon')
+                        handleSelectCanonMode()
+                      }}
+                    >
+                      <div className="mobile-chooser-icon" aria-hidden="true">
+                        <img src={sherlockWatsonImg} alt="" className="mobile-chooser-illustration" />
+                      </div>
+                      <div className="mobile-chooser-body">
+                        <div className="mobile-chooser-title">Interactive canon mode</div>
+                        <p className="mobile-chooser-summary">
+                          Ask questions directly about the Sherlock Holmes canon. RAG-powered Q&A.
+                        </p>
+                        <span className="mobile-chooser-btn">Ask the canon</span>
+                      </div>
+                    </button>
                   </div>
                 </section>
               ) : isMobile && mobileArchiveChoice === 'character' ? (
@@ -645,7 +811,7 @@ function App() {
                   </div>
                 </section>
               ) : isMobile && mobileArchiveChoice === 'six' ? (
-                <section className="six-mode-panel six-mode-panel--mobile-drill" aria-label="Six-character experiences">
+                <section className="six-mode-panel six-mode-panel--mobile-drill" aria-label="Archive experiences">
                   <button
                     type="button"
                     className="mobile-drill-back"
@@ -655,9 +821,9 @@ function App() {
                     <span>←</span>
                     <span>Back</span>
                   </button>
-                  <h3 className="six-mode-heading">Six-character experiences</h3>
+                  <h3 className="six-mode-heading">Archive experiences</h3>
                   <p className="six-mode-lead">
-                    All six — {SIX_CHARACTER_NAMES} — in one setting.
+                    Six-character stories, chatroom, or direct canon Q&A.
                   </p>
                   <div className="six-mode-grid">
                     <button
@@ -692,6 +858,22 @@ function App() {
                           Address them, pose a question, or introduce a topic. They converse and respond in character.
                         </p>
                         <span className="six-mode-btn">Enter room</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      className={`six-mode-card${activeCanonMode ? ' is-active' : ''}`}
+                      onClick={handleSelectCanonMode}
+                    >
+                      <div className="six-mode-icon" aria-hidden="true">
+                        <img src={sherlockWatsonImg} alt="" className="six-mode-illustration" />
+                      </div>
+                      <div className="six-mode-body">
+                        <div className="six-mode-title">Interactive canon mode</div>
+                        <p className="six-mode-summary">
+                          Ask questions directly about the Sherlock Holmes canon. RAG-powered Q&A.
+                        </p>
+                        <span className="six-mode-btn">Ask the canon</span>
                       </div>
                     </button>
                   </div>
@@ -777,10 +959,10 @@ function App() {
                     </div>
                   </aside>
 
-                  <section className="six-mode-panel" aria-label="Six-character experiences">
-                    <h3 className="six-mode-heading">Six-character experiences</h3>
+                  <section className="six-mode-panel" aria-label="Archive experiences">
+                    <h3 className="six-mode-heading">Archive experiences</h3>
                     <p className="six-mode-lead">
-                      All six — {SIX_CHARACTER_NAMES} — in one setting.
+                      Six-character stories, chatroom, or direct canon Q&A.
                     </p>
                     <div className="six-mode-grid">
                       <button
@@ -815,6 +997,22 @@ function App() {
                             Address them, pose a question, or introduce a topic. They converse and respond in character.
                           </p>
                           <span className="six-mode-btn">Enter room</span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className={`six-mode-card${activeCanonMode ? ' is-active' : ''}`}
+                        onClick={handleSelectCanonMode}
+                      >
+                        <div className="six-mode-icon" aria-hidden="true">
+                          <img src={sherlockWatsonImg} alt="" className="six-mode-illustration" />
+                        </div>
+                        <div className="six-mode-body">
+                          <div className="six-mode-title">Interactive canon mode</div>
+                          <p className="six-mode-summary">
+                            Ask questions directly about the Sherlock Holmes canon. RAG-powered Q&A over the indexed stories.
+                          </p>
+                          <span className="six-mode-btn">Ask the canon</span>
                         </div>
                       </button>
                     </div>
