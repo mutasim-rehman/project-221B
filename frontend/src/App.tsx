@@ -16,6 +16,8 @@ type CharacterKey = 'sherlock' | 'watson' | 'moriarty' | 'irene' | 'mycroft' | '
 
 type SixMode = 'case_story' | 'chatroom'
 
+type MobileArchiveChoice = null | 'character' | 'six'
+
 type Speaker = 'user' | 'character'
 
 const CHARACTER_IMAGES: Record<CharacterKey, string> = {
@@ -99,6 +101,22 @@ const CHARACTERS: CharacterConfig[] = [
     signature: 'G.L.',
   },
 ]
+
+const MOBILE_BREAKPOINT = 640
+
+function useMediaQuery(query: string): boolean {
+  const [matches, setMatches] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(query).matches : false,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(query)
+    const handler = (e: MediaQueryListEvent) => setMatches(e.matches)
+    mq.addEventListener('change', handler)
+    setMatches(mq.matches)
+    return () => mq.removeEventListener('change', handler)
+  }, [query])
+  return matches
+}
 
 function formatTimestamp(date: Date): string {
   return date.toLocaleTimeString(undefined, {
@@ -198,6 +216,8 @@ function App() {
     warmupConnection()
   }, [])
 
+  const isMobile = useMediaQuery(`(max-width: ${MOBILE_BREAKPOINT}px)`)
+  const [mobileArchiveChoice, setMobileArchiveChoice] = useState<MobileArchiveChoice>(null)
   const [activeKey, setActiveKey] = useState<CharacterKey | null>(null)
   const [activeSixMode, setActiveSixMode] = useState<SixMode | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -240,6 +260,7 @@ function App() {
   }
 
   const handleReturnToArchive = () => {
+    setMobileArchiveChoice(null)
     setActiveKey(null)
     setActiveSixMode(null)
     setMessages([])
@@ -526,128 +547,281 @@ function App() {
             </header>
 
             <section className="archive-layout" aria-label="Character selection and atmosphere">
-              <section className="character-panel" aria-label="Character selection">
-                <h2 className="section-heading">
-                  Whom will you <span>consult</span>?
-                </h2>
-                <p className="section-lead">
-                  These are not modern avatars but preserved correspondents. Select one to open a
-                  private exchange in the case journal.
-                </p>
-                <div className="character-grid">
-                  {CHARACTERS.map((character) => (
+              {isMobile && mobileArchiveChoice === null ? (
+                <section className="mobile-chooser" aria-label="Choose experience type">
+                  <h2 className="section-heading">
+                    Choose your <span>experience</span>
+                  </h2>
+                  <p className="section-lead">
+                    Select one to continue.
+                  </p>
+                  <div className="mobile-chooser-grid">
                     <button
-                      key={character.key}
                       type="button"
-                      className={`character-card${
-                        activeKey === character.key ? ' is-active' : ''
-                      }`}
-                      onClick={() => handleSelectCharacter(character)}
+                      className="mobile-chooser-card"
+                      onClick={() => setMobileArchiveChoice('character')}
                     >
-                      <div className="portrait-frame" aria-hidden="true">
-                        <img
-                          src={CHARACTER_IMAGES[character.key]}
-                          alt=""
-                          className="portrait-image"
-                        />
+                      <div className="mobile-chooser-icon" aria-hidden="true">
+                        <img src={sherlockImg} alt="" className="mobile-chooser-illustration" />
                       </div>
-                      <div className="character-body">
-                        <div>
-                          <div className="character-name">{character.name}</div>
-                          <div className="character-title">{character.title}</div>
-                        </div>
-                        <p className="character-summary">{character.summary}</p>
-                        <div className="character-footer">
-                          <div className="character-meta">
-                            Tone: <span>{character.tone}</span>
-                          </div>
-                          <span className="character-button">
-                            <span>Consult</span>
-                            <span>↗</span>
-                          </span>
-                        </div>
+                      <div className="mobile-chooser-body">
+                        <div className="mobile-chooser-title">Character-based chatbot</div>
+                        <p className="mobile-chooser-summary">
+                          Consult a single correspondent from the archives—Sherlock, Watson, Moriarty, Irene, Mycroft, or Lestrade.
+                        </p>
+                        <span className="mobile-chooser-btn">Choose character</span>
                       </div>
                     </button>
-                  ))}
-                </div>
-              </section>
-
-              <div className="archive-sidebar">
-                <aside className="ambient-panel" aria-label="Atmosphere and notes">
-                <div className="ambient-illustration">
-                  <img src={atmosphericsImg} alt="" aria-hidden="true" />
-                </div>
-                <div className="ambient-header">
-                  <div className="ambient-heading">Atmospherics</div>
-                  <div className="ambient-tagline">Fog, ink, and deduction</div>
-                </div>
-                <div className="ambient-body">
-                  <p className="ambient-quote">
-                    “You know my methods,” Holmes once remarked. “Apply them.” What follows is a
-                    record of such applications—annotated, cross‑referenced, and kept from the
-                    vulgar eye.
-                  </p>
-                  <div>
-                    <div className="ambient-list-label">Within these rooms</div>
-                    <ul className="ambient-list">
-                      <li>A lamplit desk, paper weighted by a service revolver.</li>
-                      <li>The murmur of London outside, dim through the fog.</li>
-                      <li>
-                        Marginalia in a familiar hand: deductions, doubts, and sudden, precise
-                        conclusions.
-                      </li>
-                    </ul>
+                    <button
+                      type="button"
+                      className="mobile-chooser-card"
+                      onClick={() => setMobileArchiveChoice('six')}
+                    >
+                      <div className="mobile-chooser-icon" aria-hidden="true">
+                        <img src={fullCastImg} alt="" className="mobile-chooser-illustration" />
+                      </div>
+                      <div className="mobile-chooser-body">
+                        <div className="mobile-chooser-title">6 character experience</div>
+                        <p className="mobile-chooser-summary">
+                          Generate a story or enter a chatroom with all six characters together.
+                        </p>
+                        <span className="mobile-chooser-btn">View options</span>
+                      </div>
+                    </button>
                   </div>
-                  <p className="ambient-footnote">
-                    <strong>Note.</strong> This interface is not a chat window but a viewing slit
-                    into an orderly chaos of cases, reconstructed for your private consultation.
+                </section>
+              ) : isMobile && mobileArchiveChoice === 'character' ? (
+                <section className="character-panel character-panel--mobile-drill" aria-label="Character selection">
+                  <button
+                    type="button"
+                    className="mobile-drill-back"
+                    onClick={() => setMobileArchiveChoice(null)}
+                    aria-label="Back to experience choice"
+                  >
+                    <span>←</span>
+                    <span>Back</span>
+                  </button>
+                  <h2 className="section-heading">
+                    Whom will you <span>consult</span>?
+                  </h2>
+                  <p className="section-lead">
+                    Select one to open a private exchange in the case journal.
                   </p>
-                </div>
-              </aside>
+                  <div className="character-grid">
+                    {CHARACTERS.map((character) => (
+                      <button
+                        key={character.key}
+                        type="button"
+                        className={`character-card${
+                          activeKey === character.key ? ' is-active' : ''
+                        }`}
+                        onClick={() => handleSelectCharacter(character)}
+                      >
+                        <div className="portrait-frame" aria-hidden="true">
+                          <img
+                            src={CHARACTER_IMAGES[character.key]}
+                            alt=""
+                            className="portrait-image"
+                          />
+                        </div>
+                        <div className="character-body">
+                          <div>
+                            <div className="character-name">{character.name}</div>
+                            <div className="character-title">{character.title}</div>
+                          </div>
+                          <p className="character-summary">{character.summary}</p>
+                          <div className="character-footer">
+                            <div className="character-meta">
+                              Tone: <span>{character.tone}</span>
+                            </div>
+                            <span className="character-button">
+                              <span>Consult</span>
+                              <span>↗</span>
+                            </span>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              ) : isMobile && mobileArchiveChoice === 'six' ? (
+                <section className="six-mode-panel six-mode-panel--mobile-drill" aria-label="Six-character experiences">
+                  <button
+                    type="button"
+                    className="mobile-drill-back"
+                    onClick={() => setMobileArchiveChoice(null)}
+                    aria-label="Back to experience choice"
+                  >
+                    <span>←</span>
+                    <span>Back</span>
+                  </button>
+                  <h3 className="six-mode-heading">Six-character experiences</h3>
+                  <p className="six-mode-lead">
+                    All six — {SIX_CHARACTER_NAMES} — in one setting.
+                  </p>
+                  <div className="six-mode-grid">
+                    <button
+                      type="button"
+                      className={`six-mode-card${activeSixMode === 'case_story' ? ' is-active' : ''}`}
+                      onClick={() => handleSelectSixMode('case_story')}
+                    >
+                      <div className="six-mode-icon" aria-hidden="true">
+                        <img src={sherlockWatsonImg} alt="" className="six-mode-illustration" />
+                      </div>
+                      <div className="six-mode-body">
+                        <div className="six-mode-title">Case-based story</div>
+                        <p className="six-mode-summary">
+                          Choose a case or scenario—a theft, a disappearance, a cipher. We generate a story episode
+                          involving all six characters, grounded in canon and woven into late Victorian London.
+                        </p>
+                        <span className="six-mode-btn">Generate story</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      className={`six-mode-card${activeSixMode === 'chatroom' ? ' is-active' : ''}`}
+                      onClick={() => handleSelectSixMode('chatroom')}
+                    >
+                      <div className="six-mode-icon" aria-hidden="true">
+                        <img src={fullCastImg} alt="" className="six-mode-illustration" />
+                      </div>
+                      <div className="six-mode-body">
+                        <div className="six-mode-title">Character chatroom</div>
+                        <p className="six-mode-summary">
+                          Imagine a room at Baker Street—or elsewhere—where all six have gathered. You are present.
+                          Address them, pose a question, or introduce a topic. They converse and respond in character.
+                        </p>
+                        <span className="six-mode-btn">Enter room</span>
+                      </div>
+                    </button>
+                  </div>
+                </section>
+              ) : (
+                <>
+                  <section className="character-panel" aria-label="Character selection">
+                    <h2 className="section-heading">
+                      Whom will you <span>consult</span>?
+                    </h2>
+                    <p className="section-lead">
+                      These are not modern avatars but preserved correspondents. Select one to open a
+                      private exchange in the case journal.
+                    </p>
+                    <div className="character-grid">
+                      {CHARACTERS.map((character) => (
+                        <button
+                          key={character.key}
+                          type="button"
+                          className={`character-card${
+                            activeKey === character.key ? ' is-active' : ''
+                          }`}
+                          onClick={() => handleSelectCharacter(character)}
+                        >
+                          <div className="portrait-frame" aria-hidden="true">
+                            <img
+                              src={CHARACTER_IMAGES[character.key]}
+                              alt=""
+                              className="portrait-image"
+                            />
+                          </div>
+                          <div className="character-body">
+                            <div>
+                              <div className="character-name">{character.name}</div>
+                              <div className="character-title">{character.title}</div>
+                            </div>
+                            <p className="character-summary">{character.summary}</p>
+                            <div className="character-footer">
+                              <div className="character-meta">
+                                Tone: <span>{character.tone}</span>
+                              </div>
+                              <span className="character-button">
+                                <span>Consult</span>
+                                <span>↗</span>
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
 
-              <section className="six-mode-panel" aria-label="Six-character experiences">
-                <h3 className="six-mode-heading">Six-character experiences</h3>
-                <p className="six-mode-lead">
-                  All six — {SIX_CHARACTER_NAMES} — in one setting.
-                </p>
-                <div className="six-mode-grid">
-                  <button
-                    type="button"
-                    className={`six-mode-card${activeSixMode === 'case_story' ? ' is-active' : ''}`}
-                    onClick={() => handleSelectSixMode('case_story')}
-                  >
-                    <div className="six-mode-icon" aria-hidden="true">
-                      <img src={sherlockWatsonImg} alt="" className="six-mode-illustration" />
+                  <div className="archive-sidebar">
+                    <aside className="ambient-panel" aria-label="Atmosphere and notes">
+                    <div className="ambient-illustration">
+                      <img src={atmosphericsImg} alt="" aria-hidden="true" />
                     </div>
-                    <div className="six-mode-body">
-                      <div className="six-mode-title">Case-based story</div>
-                      <p className="six-mode-summary">
-                        Choose a case or scenario—a theft, a disappearance, a cipher. We generate a story episode
-                        involving all six characters, grounded in canon and woven into late Victorian London.
+                    <div className="ambient-header">
+                      <div className="ambient-heading">Atmospherics</div>
+                      <div className="ambient-tagline">Fog, ink, and deduction</div>
+                    </div>
+                    <div className="ambient-body">
+                      <p className="ambient-quote">
+                        “You know my methods,” Holmes once remarked. “Apply them.” What follows is a
+                        record of such applications—annotated, cross‑referenced, and kept from the
+                        vulgar eye.
                       </p>
-                      <span className="six-mode-btn">Generate story</span>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    className={`six-mode-card${activeSixMode === 'chatroom' ? ' is-active' : ''}`}
-                    onClick={() => handleSelectSixMode('chatroom')}
-                  >
-                    <div className="six-mode-icon" aria-hidden="true">
-                      <img src={fullCastImg} alt="" className="six-mode-illustration" />
-                    </div>
-                    <div className="six-mode-body">
-                      <div className="six-mode-title">Character chatroom</div>
-                      <p className="six-mode-summary">
-                        Imagine a room at Baker Street—or elsewhere—where all six have gathered. You are present.
-                        Address them, pose a question, or introduce a topic. They converse and respond in character.
+                      <div>
+                        <div className="ambient-list-label">Within these rooms</div>
+                        <ul className="ambient-list">
+                          <li>A lamplit desk, paper weighted by a service revolver.</li>
+                          <li>The murmur of London outside, dim through the fog.</li>
+                          <li>
+                            Marginalia in a familiar hand: deductions, doubts, and sudden, precise
+                            conclusions.
+                          </li>
+                        </ul>
+                      </div>
+                      <p className="ambient-footnote">
+                        <strong>Note.</strong> This interface is not a chat window but a viewing slit
+                        into an orderly chaos of cases, reconstructed for your private consultation.
                       </p>
-                      <span className="six-mode-btn">Enter room</span>
                     </div>
-                  </button>
-                </div>
-              </section>
-              </div>
+                  </aside>
+
+                  <section className="six-mode-panel" aria-label="Six-character experiences">
+                    <h3 className="six-mode-heading">Six-character experiences</h3>
+                    <p className="six-mode-lead">
+                      All six — {SIX_CHARACTER_NAMES} — in one setting.
+                    </p>
+                    <div className="six-mode-grid">
+                      <button
+                        type="button"
+                        className={`six-mode-card${activeSixMode === 'case_story' ? ' is-active' : ''}`}
+                        onClick={() => handleSelectSixMode('case_story')}
+                      >
+                        <div className="six-mode-icon" aria-hidden="true">
+                          <img src={sherlockWatsonImg} alt="" className="six-mode-illustration" />
+                        </div>
+                        <div className="six-mode-body">
+                          <div className="six-mode-title">Case-based story</div>
+                          <p className="six-mode-summary">
+                            Choose a case or scenario—a theft, a disappearance, a cipher. We generate a story episode
+                            involving all six characters, grounded in canon and woven into late Victorian London.
+                          </p>
+                          <span className="six-mode-btn">Generate story</span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        className={`six-mode-card${activeSixMode === 'chatroom' ? ' is-active' : ''}`}
+                        onClick={() => handleSelectSixMode('chatroom')}
+                      >
+                        <div className="six-mode-icon" aria-hidden="true">
+                          <img src={fullCastImg} alt="" className="six-mode-illustration" />
+                        </div>
+                        <div className="six-mode-body">
+                          <div className="six-mode-title">Character chatroom</div>
+                          <p className="six-mode-summary">
+                            Imagine a room at Baker Street—or elsewhere—where all six have gathered. You are present.
+                            Address them, pose a question, or introduce a topic. They converse and respond in character.
+                          </p>
+                          <span className="six-mode-btn">Enter room</span>
+                        </div>
+                      </button>
+                    </div>
+                  </section>
+                  </div>
+                </>
+              )}
             </section>
           </div>
         </div>
