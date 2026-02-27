@@ -32,7 +32,7 @@ A developer’s guide to deploying this project: architecture, steps, hurdles, a
 ### Summary
 
 - **Frontend**: React + Vite, deployed to Vercel. Uses `@gradio/client` to talk to the Hugging Face Space.
-- **Backend (prod)**: Gradio app in `huggingface/appledoor/`, deployed as a Hugging Face Space. Uses HF Inference API (Qwen 7B) and ChromaDB for RAG.
+- **Backend (prod)**: Gradio app in `huggingface/appledoor/`, deployed as a Hugging Face Space. Uses HF Inference API (Qwen 7B) and ChromaDB for RAG. Includes character chat, case story, six-character chatroom, and **interactive canon mode** (RAG Q&A).
 - **Backend (local)**: FastAPI (`src.api.main`) with Ollama for local dev.
 
 ### Deployment Flow
@@ -108,7 +108,7 @@ The `huggingface/appledoor/` directory is a self-contained Gradio Space:
 | No model / no credits | Inference provider not set up | Enable at least one provider in [inference-providers](https://huggingface.co/settings/inference-providers) |
 | First run takes 5–10+ minutes | ChromaDB index built at startup | Pre-build locally: `cd huggingface/appledoor && python -m src.index`, then commit `chroma_db/` to the Space repo |
 | App fails with path errors | Paths assume Space root | `app.py` uses `os.path.dirname(__file__)` so paths resolve from the app root |
-| Gradio client can’t find endpoints | Endpoint names differ | Frontend must use `/chat`, `/gen_case_story`, `/chat_1` as in `app.py`; see `frontend/src/api.ts` |
+| Gradio client can’t find endpoints | Endpoint names differ | Frontend must use `/chat`, `/gen_case_story`, `/chat_1`, `/canon_qa` as in `app.py`; see `frontend/src/api.ts` |
 
 ### Gradio Endpoint Mapping
 
@@ -117,8 +117,59 @@ The frontend (`api.ts`) expects these predict calls:
 - Character chat → `/chat` with `message`, `param_2` (character key)
 - Case story → `/gen_case_story` with `prompt`
 - Six-character chatroom → `/chat_1` with `message`
+- Interactive canon Q&A → `/canon_qa` with `message`
 
 Changing these in `app.py` requires matching updates in the frontend.
+
+### Hugging Face Terminal Commands
+
+From the project root or `huggingface/appledoor`:
+
+```bash
+# Navigate to the HF Space directory
+cd huggingface/appledoor
+
+# Create Python virtual environment and install dependencies
+python -m venv .venv
+# Windows:
+.venv\Scripts\activate
+# Linux/macOS:
+source .venv/bin/activate
+
+pip install -r requirements.txt
+
+# Build ChromaDB index (do this before first push to avoid long cold-start)
+python -m src.index
+
+# Run the Gradio app locally (optional, for testing)
+python app.py
+
+# Push to Hugging Face (after cloning the Space and adding remote)
+git add .
+git commit -m "Add interactive canon mode"
+git push origin main
+```
+
+If deploying a new Space from scratch:
+
+```bash
+# Install Hugging Face CLI (if not installed)
+pip install huggingface_hub
+
+# Login (creates ~/.huggingface/token)
+huggingface-cli login
+
+# Create Space and upload (from project root)
+cd huggingface/appledoor
+huggingface-cli repo create appledoor --type space --space_sdk gradio
+git init
+git remote add origin https://huggingface.co/spaces/YOUR_USERNAME/appledoor
+git add .
+git commit -m "Initial 221B Space with canon mode"
+git push -u origin main
+```
+
+Replace `YOUR_USERNAME` with your Hugging Face username.
 
 ---
 

@@ -8,7 +8,12 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from src.backend_api import character_chat_turn, six_character_case_story, six_character_chatroom_turn
+from src.backend_api import (
+    canon_qa_turn,
+    character_chat_turn,
+    six_character_case_story,
+    six_character_chatroom_turn,
+)
 from src.config import MAX_QUERY_CHARS
 from src.logging_utils import get_request_logger, log_request
 
@@ -66,6 +71,19 @@ class CharacterChatRequest(BaseModel):
 class CharacterChatResponse(BaseModel):
     reply: str
     character: str
+    sources: list[str]
+    mode: str
+    strictness: str
+
+
+class CanonQaRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=MAX_QUERY_CHARS)
+    session_id: str = Field(..., min_length=1)
+    strictness: str = Field(default="strict", pattern="^(creative|balanced|strict)$")
+
+
+class CanonQaResponse(BaseModel):
+    answer: str
     sources: list[str]
     mode: str
     strictness: str
@@ -217,6 +235,33 @@ async def api_character_chat(req: CharacterChatRequest, request: Request):
         )
     except Exception as e:
         logger.exception("character_chat failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.post("/api/canon-qa", response_model=CanonQaResponse)
+async def api_canon_qa(req: CanonQaRequest, request: Request):
+    """Get a canon-grounded answer to a question about the Sherlock Holmes stories."""
+    log_request(
+        logger,
+        session_id=req.session_id,
+        user_input=req.question,
+        ip=_client_ip(request),
+        extra_fields={"mode": "canon_qa"},
+    )
+    try:
+        result = canon_qa_turn(
+            question=req.question,
+            session_id=req.session_id,
+            strictness=req.strictness,
+        )
+        return CanonQaResponse(
+            answer=result["answer"],
+            sources=result["sources"],
+            mode=result["mode"],
+            strictness=result["strictness"],
+        )
+    except Exception as e:
+        logger.exception("canon_qa failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

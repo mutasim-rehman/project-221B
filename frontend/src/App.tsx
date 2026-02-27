@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
-import { fetchCaseStory, fetchCharacterReply, fetchChatroomTurn, isApiConfigured, warmupConnection } from './api'
+import { fetchCanonReply, fetchCaseStory, fetchCharacterReply, fetchChatroomTurn, isApiConfigured, warmupConnection } from './api'
 
 import sherlockImg from '../resources/sherlock.png'
 import watsonImg from '../resources/watson.png'
@@ -327,7 +327,7 @@ function App() {
     }
   }
 
-  const handleCanonSubmit = (event: FormEvent) => {
+  const handleCanonSubmit = async (event: FormEvent) => {
     event.preventDefault()
     const trimmed = draft.trim()
     if (!trimmed || isAwaitingReply) return
@@ -341,14 +341,20 @@ function App() {
     }
     setMessages((prev) => [...prev, userMessage])
     setDraft('')
+    setIsAwaitingReply(true)
 
-    const deploymentReply: Message = {
-      id: makeId(),
-      speaker: 'character',
-      text: 'This feature is under deployment.',
-      createdAt: formatTimestamp(new Date()),
+    try {
+      const answer = await fetchCanonReply(trimmed, 'strict')
+      const reply: Message = {
+        id: makeId(),
+        speaker: 'character',
+        text: answer,
+        createdAt: formatTimestamp(new Date()),
+      }
+      setMessages((prev) => [...prev, reply])
+    } finally {
+      setIsAwaitingReply(false)
     }
-    setMessages((prev) => [...prev, deploymentReply])
   }
 
   if (activeCanonMode) {
@@ -376,9 +382,11 @@ function App() {
               <br />
               Pose questions about the Sherlock Holmes stories. The system retrieves relevant passages and answers from the indexed canon.
             </div>
-            <div className="sidebar-note">
-              This feature is under deployment.
-            </div>
+            {!isApiConfigured && (
+              <div className="sidebar-note">
+                API not connected. Replies use local mocks. Set VITE_GRADIO_SPACE or VITE_API_BASE to connect.
+              </div>
+            )}
           </aside>
           <main className="chat-shell" aria-label="Interactive canon conversation">
             <header className="chat-header">
@@ -431,15 +439,22 @@ function App() {
                 <button
                   className="chat-submit"
                   type="submit"
-                  disabled={!draft.trim()}
-                  aria-label="Send question"
+                  disabled={!draft.trim() || isAwaitingReply}
+                  aria-label={isAwaitingReply ? 'Awaiting reply' : 'Send question'}
                 >
                   <span className="chat-submit__icon chat-submit__icon--desktop" aria-hidden>✉</span>
                   <span className="chat-submit__icon chat-submit__icon--mobile" aria-hidden>→</span>
-                  <span className="chat-submit__label">Send question</span>
+                  <span className="chat-submit__label">{isAwaitingReply ? 'Fetching…' : 'Send question'}</span>
                 </button>
-                <div className="chat-status" data-hide-on-mobile>
-                  This feature is under deployment.
+                <div
+                  className="chat-status"
+                  data-hide-on-mobile={!isAwaitingReply ? '' : undefined}
+                >
+                  {isAwaitingReply
+                    ? 'Retrieving passages and generating answer…'
+                    : isApiConfigured
+                      ? 'Answers are grounded in retrieved canon passages.'
+                      : 'API not connected. Replies use local mocks.'}
                 </div>
               </div>
             </form>

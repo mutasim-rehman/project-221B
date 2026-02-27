@@ -63,6 +63,13 @@ export interface CharacterChatResponse {
   strictness: string
 }
 
+export interface CanonQaResponse {
+  answer: string
+  sources: string[]
+  mode: string
+  strictness: string
+}
+
 function getSessionId(): string {
   let sid = sessionStorage.getItem('221b_session_id')
   if (!sid) {
@@ -145,6 +152,32 @@ export async function fetchChatroomTurn(question: string, strictness = 'balanced
   }
 }
 
+export async function fetchCanonReply(
+  question: string,
+  strictness = 'strict'
+): Promise<string> {
+  if (GRADIO_SPACE) {
+    try {
+      const client = await getGradioClient()
+      const result = await client.predict('//canon_qa', { message: question })
+      return extractText(result.data)
+    } catch {
+      return mockCanonReply(question)
+    }
+  }
+  try {
+    const sessionId = getSessionId()
+    const data = await post<CanonQaResponse>('/api/canon-qa', {
+      question,
+      session_id: sessionId,
+      strictness,
+    })
+    return data.answer
+  } catch {
+    return mockCanonReply(question)
+  }
+}
+
 export async function fetchCharacterReply(
   characterKey: string,
   question: string,
@@ -174,6 +207,14 @@ export async function fetchCharacterReply(
   } catch {
     return mockCharacterReplyText(characterKey, question)
   }
+}
+
+function mockCanonReply(_question: string): string {
+  return (
+    'Mycroft Holmes is Sherlock\'s elder brother, a government functionary of even greater intellectual powers. ' +
+    'He appears in "The Greek Interpreter" and "The Bruce-Partington Plans," among others. ' +
+    '(Mock response — connect API for live RAG answers.)'
+  )
 }
 
 function mockCharacterReplyText(characterKey: string, question: string): string {
